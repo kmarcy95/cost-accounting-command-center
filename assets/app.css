@@ -253,6 +253,41 @@ table.pivot td.cell:hover { background: var(--accent-weak); }
 table.pivot td.rowhead { font-weight: 600; }
 .dim-pickers { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
 
+/* ---------- Per-page command bar ---------- */
+.pagebar { position: sticky; top: 0; z-index: 15; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 7px 10px; margin-bottom: 18px; box-shadow: var(--shadow-sm); }
+.pagebar-title { font-size: 13.5px; }
+.pagebar-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.pbtn { display: inline-flex; align-items: center; gap: 6px; font-family: inherit; font-size: 12.5px; color: var(--text-dim);
+  background: transparent; border: 1px solid transparent; border-radius: 7px; padding: 5px 9px; cursor: pointer; }
+.pbtn svg { width: 15px; height: 15px; }
+.pbtn:hover { background: var(--accent-weak); color: var(--accent); border-color: var(--border); }
+@media (max-width: 920px) { .pbtn span { display: none; } }
+
+/* ---------- Drill-down breadcrumb ---------- */
+.drillcrumb { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.crumb { font-family: inherit; font-size: 13px; color: var(--accent); background: var(--accent-weak); border: 0; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.crumb:hover { text-decoration: underline; }
+.crumb-sep { color: var(--text-muted); }
+
+/* ---------- Toasts ---------- */
+#toastbox { position: fixed; bottom: 22px; right: 22px; z-index: 1300; display: flex; flex-direction: column; gap: 8px; }
+.toast { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--good); border-radius: 8px; box-shadow: var(--shadow-lg); padding: 10px 14px; font-size: 13px; color: var(--text); }
+.toast.bad { border-left-color: var(--bad); }
+
+/* ---------- Fullscreen (maximize content) ---------- */
+body.fullscreen .sidebar { display: none; }
+body.fullscreen .app { grid-template-columns: 1fr; }
+body.fullscreen .content { max-width: none; }
+
+/* ---------- Print ---------- */
+@media print {
+  .sidebar, .topbar, .pagebar, #winlayer, #toastbox { display: none !important; }
+  .app { grid-template-columns: 1fr; }
+  .content { max-width: none; padding: 0; }
+  .card { break-inside: avoid; }
+}
+
 /* ---------- Personalizable grid ---------- */
 .gridbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-bottom: 1px solid var(--border); }
 table.dt tbody tr.grp td { background: var(--n-100); font-size: 12px; color: var(--text-dim); border-top: 2px solid var(--border-strong); text-transform: none; }
