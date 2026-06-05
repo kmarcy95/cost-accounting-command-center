@@ -31,6 +31,7 @@
       c.appendChild(CACC.grid('cost-version-log', [
         { key: 'ts', label: 'Timestamp' }, { key: 'user', label: 'User' }, { key: 'role', label: 'Role' }, { key: 'area', label: 'Area' }, { key: 'action', label: 'Action' }, { key: 'field', label: 'Field' }, { key: 'oldValue', label: 'Old' }, { key: 'newValue', label: 'New' }
       ], (CACC.store.data().auditLog || []).filter(function (a) { return a.area === 'Cost version'; }), { title: 'Change log' }));
+      c.appendChild(ui.aiPanel('costVersions', M.ctx.costVersions()));
     }
   };
 })(typeof window !== 'undefined' ? window : this);

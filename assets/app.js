@@ -33,7 +33,8 @@
     expand: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>',
     info: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
     filter: '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
-    star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'
+    star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+    back: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>'
   };
   function icon(name, cls) {
     var span = el('span', { class: cls || '' });
@@ -100,9 +101,9 @@
       }
       return panel;
     },
-    /* Drill-downs open as NON-BLOCKING floating windows (draggable, multiple at once). */
-    modal: function (title, bodyNodes, subtitle) { return floatingWindow(title, bodyNodes, subtitle); },
-    window: function (title, bodyNodes, subtitle) { return floatingWindow(title, bodyNodes, subtitle); },
+    /* Drill-downs replace the current view in place (with a Back action), stacking for multi-level. */
+    modal: function (title, bodyNodes, subtitle) { return pushDetail(title, bodyNodes, subtitle); },
+    window: function (title, bodyNodes, subtitle) { return pushDetail(title, bodyNodes, subtitle); },
     /* Build the SKU drill-down detail nodes (lowest level). row=reserve analysis, raw=seed item. */
     itemDetail: function (row, raw) {
       function kv(rows) {
@@ -331,7 +332,36 @@
     layer.appendChild(win); bringToFront(); openWindows.push(close);
     return close;
   }
-  CACC.closeAllWindows = function () { openWindows.slice().forEach(function (close) { close(); }); };
+  CACC.closeAllWindows = function () { openWindows.slice().forEach(function (close) { close(); }); while (detailStack.length) popDetail(); };
+
+  /* ---------- In-place drill-down (replaces current view, with Back) ---------- */
+  var detailStack = [];
+  function pushDetail(title, bodyNodes, subtitle) {
+    var view = document.getElementById('view');
+    var saved = Array.prototype.slice.call(view.childNodes);
+    saved.forEach(function (n) { view.removeChild(n); });
+    detailStack.push(saved);
+    var backLabel = detailStack.length > 1 ? 'Back' : 'Back to ' + (CACC.views[current] ? CACC.views[current].title : 'page');
+    var backBtn = el('button', { class: 'pbtn pbtn-back', onclick: popDetail }, [icon('back'), el('span', { text: backLabel })]);
+    var crumbs = el('div', { class: 'detail-crumbs', text: 'Level ' + detailStack.length + ' drill-down' });
+    var panel = el('div', { class: 'detailview' }, [
+      el('div', { class: 'detailbar' }, [backBtn, crumbs]),
+      el('div', { class: 'detailhead' }, [el('div', {}, [el('div', { class: 'detail-title', text: title }), subtitle ? el('div', { class: 'detail-sub', text: subtitle }) : null])]),
+      el('div', { class: 'detailbody' }, bodyNodes)
+    ]);
+    view.appendChild(panel);
+    window.scrollTo(0, 0); view.scrollTop = 0;
+    return popDetail;
+  }
+  function popDetail() {
+    if (!detailStack.length) return;
+    var view = document.getElementById('view');
+    Array.prototype.slice.call(view.childNodes).forEach(function (n) { view.removeChild(n); });
+    var saved = detailStack.pop();
+    saved.forEach(function (n) { view.appendChild(n); });
+    window.scrollTo(0, 0);
+  }
+  CACC.popDetail = popDetail;
 
   /* ---------- Business-process-flow stage bar ---------- */
   ui.stageBar = function (stages, activeIndex, onClick) {
@@ -344,6 +374,20 @@
       ]));
     });
     return bar;
+  };
+
+  /* D365-style FastTabs (collapsible form sections). sections=[{title, summary?, nodes, open?}] */
+  ui.fastTabs = function (sections) {
+    var host = el('div', { class: 'fasttabs' });
+    sections.forEach(function (s) {
+      var open = s.open !== false;
+      var body = el('div', { class: 'ft-body' }, s.nodes); if (!open) body.style.display = 'none';
+      var caret = el('span', { class: 'ft-caret', text: open ? '▾' : '▸' });
+      var head = el('button', { class: 'ft-head', onclick: function () { var vis = body.style.display !== 'none'; body.style.display = vis ? 'none' : ''; caret.textContent = vis ? '▸' : '▾'; } },
+        [caret, el('span', { class: 'ft-title', text: s.title }), s.summary ? el('span', { class: 'ft-summary', text: s.summary }) : null]);
+      host.appendChild(el('div', { class: 'ft-section' }, [head, body]));
+    });
+    return host;
   };
 
   /* ---------- Nav + router ---------- */
@@ -403,8 +447,10 @@
     });
     var view = CACC.views[key];
     document.getElementById('viewTitle').textContent = view.title;
-    document.getElementById('viewCrumb').textContent = view.crumb || (CACC.store.data().company.name + ' · ' + CACC.store.data().company.period);
+    var navItem = NAV.filter(function (n) { return n.key === key; })[0];
+    document.getElementById('viewCrumb').textContent = (CACC.store.data().group || 'Group') + ' › ' + (navItem ? navItem.section : '') + ' › ' + view.title;
     var c = document.getElementById('view');
+    detailStack.length = 0;
     clear(c); c.scrollTop = 0; window.scrollTo(0, 0);
     c.appendChild(buildPageBar(key, view));
     view.render(c);
@@ -490,6 +536,7 @@
 
   function globalKeys(e) {
     if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); openPalette(); return; }
+    if (e.key === 'Escape' && detailStack.length) { popDetail(); return; }
     var tag = (e.target && e.target.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (e.key >= '1' && e.key <= '9') {

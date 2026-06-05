@@ -444,6 +444,71 @@
         bullets: r.lines.map(function (l) { return l.qty + '× ' + (l.name || l.sku) + ' @ ' + fmt.money(l.unitCost) + ' = ' + fmt.money(l.extended); })
       };
     },
+    landedCost: function (c) {
+      var ships = c.shipments || [];
+      var totalCharges = ships.reduce(function (s, x) { return s + x.result.totalCharges; }, 0);
+      var rows = ships.reduce(function (a, x) { return a.concat(x.result.rows); }, []);
+      var topUplift = rows.slice().sort(function (a, b) { return (b.landedUnit - b.baseUnit) - (a.landedUnit - a.baseUnit); })[0];
+      var allRecon = ships.every(function (x) { return x.result.reconciles; });
+      return {
+        headline: 'Landed cost allocation',
+        paragraphs: [
+          'Across ' + ships.length + ' inbound shipment(s), ' + fmt.money0(totalCharges) + ' of freight, duty, handling and insurance is capitalized into inventory and spread over ' +
+          rows.length + ' receipt line(s). ' + (allRecon ? 'All allocations reconcile to the charges booked.' : 'One or more shipments do not reconcile — review the allocation basis before posting.'),
+          topUplift ? topUplift.sku + ' carries the largest unit uplift: a landed cost of ' + fmt.money(topUplift.landedUnit) + '/unit versus an invoice cost of ' + fmt.money(topUplift.baseUnit) +
+            '/unit (' + fmt.pct(topUplift.baseUnit ? (topUplift.landedUnit - topUplift.baseUnit) / topUplift.baseUnit * 100 : 0) + ' add-on). Omitting landed cost understates COGS and overstates reported margin.'
+            : 'No receipts to allocate this period.'
+        ],
+        bullets: ships.map(function (x) { return x.id + ' (' + x.origin + '): ' + fmt.money0(x.result.totalCharges) + ' charges on ' + x.result.rows.length + ' receipt(s)' + (x.result.reconciles ? '' : ' — does not reconcile'); })
+      };
+    },
+    subcontracting: function (c) {
+      var rows = c.orders || [];
+      var svc = rows.reduce(function (s, r) { return s + r.serviceCost; }, 0);
+      var comp = rows.reduce(function (s, r) { return s + r.componentsCost; }, 0);
+      var open = rows.filter(function (r) { return r.status !== 'Received'; });
+      var top = rows.slice().sort(function (a, b) { return (b.serviceCost + b.componentsCost) - (a.serviceCost + a.componentsCost); })[0];
+      return {
+        headline: 'Subcontracting spend',
+        paragraphs: [
+          'For ' + c.filter + ', ' + rows.length + ' subcontract order(s) total ' + fmt.money0(svc + comp) + ' — ' + fmt.money0(svc) + ' of outsourced service charges plus ' +
+          fmt.money0(comp) + ' of supplied components. ' + open.length + ' order(s) remain open at ' + fmt.money0(open.reduce(function (s, r) { return s + r.serviceCost + r.componentsCost; }, 0)) + '.',
+          top ? top.supplier + ' on ' + top.operation + ' is the largest order at ' + fmt.money0(top.serviceCost + top.componentsCost) +
+            '. Track each outsourced operation against the in-house standard, and confirm receipt, three-way match and close on every open order.'
+            : 'No subcontract activity this period.'
+        ],
+        bullets: rows.slice(0, 5).map(function (r) { return r.id + ' ' + r.supplier + ' · ' + r.operation + ' · ' + fmt.money0(r.serviceCost + r.componentsCost) + ' · ' + r.status; })
+      };
+    },
+    traceability: function (c) {
+      var lots = c.lots || [];
+      var hold = lots.filter(function (l) { return l.status === 'On hold'; });
+      var shipped = lots.filter(function (l) { return l.status === 'Shipped'; });
+      return {
+        headline: 'Lot & serial traceability',
+        paragraphs: [
+          lots.length + ' lot(s) are tracked with full backward/forward genealogy — ' + shipped.length + ' shipped and ' + hold.length +
+          ' on hold/quarantined. Each lot links to what was consumed into it and where it flowed downstream.',
+          hold.length ? hold.length + ' lot(s) are on hold; genealogy scopes containment immediately (which finished lots and customers are exposed) without a plant-wide recall.'
+            : 'No lots are on hold, but the genealogy still supports rapid containment the moment a defect is found.'
+        ],
+        bullets: lots.slice(0, 6).map(function (l) { return l.lot + ' (' + l.sku + '): ' + fmt.num(l.qty, 0) + ' u · ' + l.plantId + ' · ' + l.status; })
+      };
+    },
+    costVersions: function (c) {
+      var vs = c.versions || [];
+      var active = vs.filter(function (v) { return v.status === 'Active'; });
+      var pending = vs.filter(function (v) { return v.status === 'Pending'; });
+      return {
+        headline: 'Standard cost versions & release',
+        paragraphs: [
+          vs.length + ' cost version(s) are on file — ' + active.length + ' active and ' + pending.length + ' pending approval. Release follows maker-checker control: a cost accountant prepares pending standards and a separate approver activates them, with every change logged.',
+          pending.length ? pending.length + ' pending version(s) await approval before they can drive inventory valuation and COGS. Review the cost deltas against the active standard first — an unreviewed standard change silently re-values inventory and distorts variances.'
+            : 'No versions are pending; the active standard is current. Create a new pending version to change costs rather than editing the live standard.'
+        ],
+        bullets: vs.map(function (v) { return v.id + ' ' + v.name + ': ' + v.status + ' · ' + v.items.length + ' item(s) · effective ' + v.effectiveFrom + (v.approvedBy ? ' · approved by ' + v.approvedBy : ' · awaiting approval'); })
+      };
+    },
     accountsPayable: function (c) {
       var ap = c.ap, top = ap.bySupplier[0];
       return {

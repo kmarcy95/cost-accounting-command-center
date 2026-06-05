@@ -19,6 +19,7 @@
         { key: 'lot', label: 'Lot' }, { key: 'sku', label: 'SKU' }, { key: 'plantId', label: 'Plant' }, { key: 'period', label: 'Period' }, { key: 'qty', label: 'Qty', fmt: 'num' },
         { key: 'status', label: 'Status', render: function (r) { return el('span', { class: 'badge ' + (r.status === 'Shipped' ? 'sb-good' : r.status === 'On hold' ? 'sb-bad' : 'sb-neutral'), text: r.status }); } }
       ], lots, { title: 'Lots', onRow: function (r) { genealogy(r.lot); } }));
+      c.appendChild(ui.aiPanel('traceability', M.ctx.traceability()));
 
       function genealogy(lot) {
         var g = M.lotGenealogy(lot);

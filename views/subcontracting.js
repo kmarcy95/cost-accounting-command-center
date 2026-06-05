@@ -24,6 +24,7 @@
         { key: 'status', label: 'Status', render: function (r) { return el('span', { class: 'badge ' + (r.status === 'Received' ? 'sb-good' : 'sb-warn'), text: r.status }); } }
       ], rows, { title: 'Subcontracting' }));
       c.appendChild(el('div', { class: 'note', style: 'margin-top:14px' }, 'Subcontracting captures outsourced operation/assembly cost (service charge + supplied components) and the procurement→production handoff. Validate one end-to-end outsourced step from PO through receipt, invoice, and close.'));
+      c.appendChild(ui.aiPanel('subcontracting', M.ctx.subcontracting()));
     }
   };
 })(typeof window !== 'undefined' ? window : this);

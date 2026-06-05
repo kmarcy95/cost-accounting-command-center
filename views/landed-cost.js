@@ -15,6 +15,7 @@
       c.appendChild(el('div', { class: 'card card-pad', style: 'display:flex;gap:12px;align-items:end' }, [el('div', { class: 'field', style: 'min-width:280px' }, [el('label', { text: 'Shipment' }), sel])]));
       c.appendChild(pane);
       render();
+      c.appendChild(ui.aiPanel('landedCost', M.ctx.landedCost()));
 
       function render() {
         clear(pane);
