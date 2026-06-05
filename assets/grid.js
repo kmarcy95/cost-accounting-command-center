@@ -27,8 +27,8 @@
     opts = opts || {};
     var key = 'cacc.grid.' + id;
     var saved = CACC.LS.get(key, {}) || {};
-    var state = { hidden: saved.hidden || {}, groupBy: saved.groupBy || '', sortKey: saved.sortKey || '', sortDir: saved.sortDir || 'asc', search: saved.search || '' };
-    function persist() { CACC.LS.set(key, { hidden: state.hidden, groupBy: state.groupBy, sortKey: state.sortKey, sortDir: state.sortDir, search: state.search }); }
+    var state = { hidden: saved.hidden || {}, groupBy: saved.groupBy || '', sortKey: saved.sortKey || '', sortDir: saved.sortDir || 'asc', search: saved.search || '', colFilters: saved.colFilters || {}, showFilters: saved.showFilters || false };
+    function persist() { CACC.LS.set(key, { hidden: state.hidden, groupBy: state.groupBy, sortKey: state.sortKey, sortDir: state.sortDir, search: state.search, colFilters: state.colFilters, showFilters: state.showFilters }); }
     function valOf(row, c) { return c.value ? c.value(row) : row[c.key]; }
     function visibleCols() { return columns.filter(function (c) { return !state.hidden[c.key]; }); }
     function cls(c) { return numericFmt(c.fmt) || c.align === 'num' ? 'num tnum' : ''; }
@@ -42,6 +42,7 @@
     var count = el('span', { class: 'muted', style: 'margin-left:auto;font-size:12.5px' });
     var bar = el('div', { class: 'gridbar' }, [
       search, groupSel,
+      el('button', { class: 'btn btn-ghost btn-sm', onclick: function () { state.showFilters = !state.showFilters; render(); persist(); } }, [CACC.icon('filter'), 'Filters']),
       el('button', { class: 'btn btn-ghost btn-sm', onclick: openColumns }, [CACC.icon('settings'), 'Columns']),
       el('button', { class: 'btn btn-ghost btn-sm', onclick: exportCSV }, [CACC.icon('list'), 'Export']),
       el('button', { class: 'btn btn-ghost btn-sm', onclick: function () { CACC.LS.remove(key); state.hidden = {}; state.groupBy = ''; state.sortKey = ''; state.search = ''; search.value = ''; groupSel.value = ''; render(); } }, 'Reset view'),
@@ -50,8 +51,15 @@
     var host = el('div', { class: 'card' }, [bar, tableWrap]);
 
     function filtered() {
-      var q = state.search; if (!q) return rows.slice();
-      return rows.filter(function (r) { return visibleCols().some(function (c) { var v = valOf(r, c); return v != null && String(v).toLowerCase().indexOf(q) >= 0; }); });
+      var q = state.search, cf = state.colFilters || {}, cfKeys = Object.keys(cf).filter(function (k) { return cf[k]; });
+      return rows.filter(function (r) {
+        if (q && !visibleCols().some(function (c) { var v = valOf(r, c); return v != null && String(v).toLowerCase().indexOf(q) >= 0; })) return false;
+        for (var i = 0; i < cfKeys.length; i++) {
+          var c = columns.filter(function (x) { return x.key === cfKeys[i]; })[0]; if (!c) continue;
+          var v = valOf(r, c); if (v == null || String(v).toLowerCase().indexOf(cf[cfKeys[i]]) < 0) return false;
+        }
+        return true;
+      });
     }
     function sorted(rs) {
       if (!state.sortKey) return rs;
@@ -82,17 +90,9 @@
       });
       return tr;
     }
-    function render() {
-      CACC.dom.clear(tableWrap);
-      var cols = visibleCols(), rs = sorted(filtered());
+    function buildBody(cols) {
+      var rs = sorted(filtered());
       count.textContent = rs.length + ' rows';
-      var hr = el('tr');
-      cols.forEach(function (c) {
-        var th = el('th', { class: (numericFmt(c.fmt) ? 'num ' : '') + 'sortable', text: c.label });
-        if (state.sortKey === c.key) th.setAttribute('aria-sort', state.sortDir === 'asc' ? 'ascending' : 'descending');
-        th.addEventListener('click', function () { if (state.sortKey === c.key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc'; else { state.sortKey = c.key; state.sortDir = 'asc'; } render(); persist(); });
-        hr.appendChild(th);
-      });
       var tbody = el('tbody');
       if (state.groupBy) {
         var gc = columns.filter(function (x) { return x.key === state.groupBy; })[0];
@@ -108,7 +108,31 @@
         rs.forEach(function (r) { tbody.appendChild(rowNode(r, cols)); });
       }
       if (!state.groupBy && cols.some(function (c) { return c.sum; })) tbody.appendChild(subtotal(cols, rs, 'Total'));
-      tableWrap.appendChild(el('table', { class: 'dt' }, [el('thead', {}, hr), tbody]));
+      return tbody;
+    }
+    function render() {
+      CACC.dom.clear(tableWrap);
+      var cols = visibleCols();
+      var hr = el('tr');
+      cols.forEach(function (c) {
+        var th = el('th', { class: (numericFmt(c.fmt) ? 'num ' : '') + 'sortable', text: c.label });
+        if (state.sortKey === c.key) th.setAttribute('aria-sort', state.sortDir === 'asc' ? 'ascending' : 'descending');
+        th.addEventListener('click', function () { if (state.sortKey === c.key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc'; else { state.sortKey = c.key; state.sortDir = 'asc'; } render(); persist(); });
+        hr.appendChild(th);
+      });
+      var thead = el('thead', {}, hr);
+      var table = el('table', { class: 'dt' });
+      if (state.showFilters) {
+        var fr = el('tr', { class: 'filterrow' });
+        cols.forEach(function (c) {
+          var inp = el('input', { type: 'text', value: state.colFilters[c.key] || '', placeholder: '⌕',
+            oninput: function () { state.colFilters[c.key] = inp.value.toLowerCase(); persist(); var nb = buildBody(cols); table.replaceChild(nb, table.tBodies[0]); } });
+          var th = el('th', {}); th.appendChild(inp); fr.appendChild(th);
+        });
+        thead.appendChild(fr);
+      }
+      table.appendChild(thead); table.appendChild(buildBody(cols));
+      tableWrap.appendChild(table);
     }
     function exportCSV() {
       var cols = visibleCols(), rs = sorted(filtered());

@@ -115,56 +115,39 @@
         });
         return el('table', { class: 'dt' }, [tb]);
       }
-      var nodes = [];
-      nodes.push(el('div', { class: 'grid g4' }, [
-        ui.kpi('On hand', fmt.num(row.qtyOnHand, 0), raw.category, 'box'),
-        ui.kpi('Unit cost', fmt.money(row.unitCost), 'standard', 'dollar'),
-        ui.kpi('Gross value', fmt.money0(row.grossValue), null, 'box'),
-        ui.kpi('Net value', fmt.money0(row.netValue), 'after reserve', 'margin', row.combinedReserve > 0 ? 'unfav' : 'fav')
-      ]));
-      nodes.push(el('div', { class: 'grid g2', style: 'margin-top:16px' }, [
-        ui.card('Lower-of-cost-or-NRV', null, [kv([
-          ['Selling price', fmt.money(raw.sellingPrice || 0)],
-          ['Less: cost to complete', '(' + fmt.money(raw.costToComplete || 0) + ')'],
-          ['Less: cost to sell', '(' + fmt.money(raw.costToSell || 0) + ')'],
-          ['Net realizable value (NRV)', fmt.money(row.nrv), true],
-          ['Unit cost', fmt.money(row.unitCost)],
-          ['Write-down per unit', fmt.money(row.nrvWritedownUnit)],
-          ['NRV reserve (× ' + fmt.num(row.qtyOnHand, 0) + ' units)', fmt.money0(row.nrvReserve), true]
-        ])]),
-        ui.card('Excess & obsolete', null, [kv([
-          ['Annual demand', fmt.num(raw.annualDemand || 0, 0)],
-          ['Demand coverage qty', fmt.num(row.demandCoverageQty, 0)],
-          ['Quantity on hand', fmt.num(row.qtyOnHand, 0)],
-          ['Excess quantity', fmt.num(row.excessQty, 0), true],
-          ['Aging (days on hand)', fmt.num(row.agingDays, 0)],
-          ['Obsolescence factor', fmt.pct(row.eoPct * 100, 0)],
-          ['Carrying value / unit', fmt.money(row.carryingUnitAfterNrv)],
-          ['E&O reserve', fmt.money0(row.eoReserve), true]
-        ])])
-      ]));
-      nodes.push(el('div', { class: 'note', style: 'margin-top:16px' }, [
-        el('strong', { text: 'Combined reserve: ' + fmt.money0(row.combinedReserve) }),
-        ' (' + fmt.pct(row.reservePct * 100) + ' of gross) — carried at net realizable value of ' + fmt.money0(row.netValue) + '.'
-      ]));
+      function fact(l, v) { return el('div', { class: 'rec-fact' }, [el('div', { class: 'rec-fact-l', text: l }), el('div', { class: 'rec-fact-v', text: v })]); }
+      var recHead = el('div', { class: 'rec-head' }, [
+        el('div', {}, [el('div', { class: 'rec-title', text: row.sku + ' · ' + row.description }), el('div', { class: 'rec-sub', text: raw.category + ' · ' + (raw.type || '').toUpperCase() })]),
+        el('div', { class: 'rec-facts' }, [
+          fact('On hand', fmt.num(row.qtyOnHand, 0)), fact('Unit cost', fmt.money(row.unitCost)), fact('Gross', fmt.money0(row.grossValue)), fact('Net', fmt.money0(row.netValue)),
+          el('span', { class: 'badge ' + (row.combinedReserve > 0 ? 'sb-warn' : 'sb-good'), text: row.combinedReserve > 0 ? 'Reserved' : 'Clean' })
+        ])
+      ]);
+      var kpiGrid = el('div', { class: 'grid g4' }, [
+        ui.kpi('On hand', fmt.num(row.qtyOnHand, 0), raw.category, 'box'), ui.kpi('Unit cost', fmt.money(row.unitCost), 'standard', 'dollar'),
+        ui.kpi('Gross value', fmt.money0(row.grossValue), null, 'box'), ui.kpi('Net value', fmt.money0(row.netValue), 'after reserve', 'margin', row.combinedReserve > 0 ? 'unfav' : 'fav')
+      ]);
+      var note = el('div', { class: 'note', style: 'margin-top:14px' }, [el('strong', { text: 'Combined reserve: ' + fmt.money0(row.combinedReserve) }), ' (' + fmt.pct(row.reservePct * 100) + ' of gross) — carried at NRV of ' + fmt.money0(row.netValue) + '.']);
+      var nrvCard = kv([
+        ['Selling price', fmt.money(raw.sellingPrice || 0)], ['Less: cost to complete', '(' + fmt.money(raw.costToComplete || 0) + ')'], ['Less: cost to sell', '(' + fmt.money(raw.costToSell || 0) + ')'],
+        ['Net realizable value (NRV)', fmt.money(row.nrv), true], ['Unit cost', fmt.money(row.unitCost)], ['Write-down per unit', fmt.money(row.nrvWritedownUnit)], ['NRV reserve (× ' + fmt.num(row.qtyOnHand, 0) + ' units)', fmt.money0(row.nrvReserve), true]
+      ]);
+      var eoCard = kv([
+        ['Annual demand', fmt.num(raw.annualDemand || 0, 0)], ['Demand coverage qty', fmt.num(row.demandCoverageQty, 0)], ['Quantity on hand', fmt.num(row.qtyOnHand, 0)], ['Excess quantity', fmt.num(row.excessQty, 0), true],
+        ['Aging (days on hand)', fmt.num(row.agingDays, 0)], ['Obsolescence factor', fmt.pct(row.eoPct * 100, 0)], ['Carrying value / unit', fmt.money(row.carryingUnitAfterNrv)], ['E&O reserve', fmt.money0(row.eoReserve), true]
+      ]);
+      var sections = [
+        { title: 'Overview', summary: fmt.money0(row.netValue) + ' net value', nodes: [kpiGrid, note] },
+        { title: 'Lower-of-cost-or-NRV write-down', summary: fmt.money0(row.nrvReserve) + ' reserve', nodes: [nrvCard], open: false },
+        { title: 'Excess & obsolete', summary: fmt.money0(row.eoReserve) + ' reserve', nodes: [eoCard], open: false }
+      ];
       if (raw.bom && raw.bom.length) {
         var roll = CACC.model.bomRollup(raw), tb = el('tbody');
-        roll.lines.forEach(function (l) {
-          tb.appendChild(el('tr', {}, [
-            el('td', { text: l.sku }), el('td', { text: l.description }),
-            el('td', { class: 'num tnum', text: fmt.num(l.qty, 2) }), el('td', { class: 'num tnum', text: fmt.money(l.unitCost) }),
-            el('td', { class: 'num tnum', text: fmt.money(l.extended) })
-          ]));
-        });
-        tb.appendChild(el('tr', { class: 'total' }, [
-          el('td', { colspan: 4, text: 'Rolled-up standard unit cost' }), el('td', { class: 'num tnum', text: fmt.money(roll.total) })
-        ]));
-        nodes.push(el('div', { class: 'section-title', text: 'Bill of materials (cost roll-up)' }));
-        nodes.push(ui.card(null, null, [el('table', { class: 'dt' }, [
-          el('thead', {}, el('tr', {}, [el('th', { text: 'SKU' }), el('th', { text: 'Component' }), el('th', { class: 'num', text: 'Qty' }), el('th', { class: 'num', text: 'Unit cost' }), el('th', { class: 'num', text: 'Extended' })])), tb
-        ])]));
+        roll.lines.forEach(function (l) { tb.appendChild(el('tr', {}, [el('td', { text: l.sku }), el('td', { text: l.description }), el('td', { class: 'num tnum', text: fmt.num(l.qty, 2) }), el('td', { class: 'num tnum', text: fmt.money(l.unitCost) }), el('td', { class: 'num tnum', text: fmt.money(l.extended) })])); });
+        tb.appendChild(el('tr', { class: 'total' }, [el('td', { colspan: 4, text: 'Rolled-up standard unit cost' }), el('td', { class: 'num tnum', text: fmt.money(roll.total) })]));
+        sections.push({ title: 'Bill of materials (cost roll-up)', summary: fmt.money(roll.total) + ' rolled cost', open: false, nodes: [el('table', { class: 'dt' }, [el('thead', {}, el('tr', {}, [el('th', { text: 'SKU' }), el('th', { text: 'Component' }), el('th', { class: 'num', text: 'Qty' }), el('th', { class: 'num', text: 'Unit cost' }), el('th', { class: 'num', text: 'Extended' })])), tb])] });
       }
-      return nodes;
+      return [recHead, ui.fastTabs(sections)];
     }
   };
   CACC.ui = ui;
@@ -571,26 +554,34 @@
     setTimeout(function () { t.remove(); }, 3000);
   };
 
-  /* ---------- Per-page command bar (D365-style ribbon) ---------- */
+  /* ---------- D365-style tabbed action pane ---------- */
   function buildPageBar(viewKey, view) {
     function vroot() { return document.getElementById('view'); }
     function btn(ic, label, fn) { return el('button', { class: 'pbtn', title: label, onclick: fn }, [icon(ic), el('span', { text: label })]); }
-    return el('div', { class: 'pagebar' }, [
-      el('div', { class: 'pagebar-title' }, [el('strong', { text: view.title }), el('span', { class: 'muted', text: '  ·  ' + (CACC.model ? CACC.model.filterLabel() : '') })]),
-      el('div', { class: 'pagebar-actions' }, [
-        btn('refresh', 'Refresh', function () { CACC.rerender(); CACC.toast('Refreshed.'); }),
-        btn('list', 'Export', function () { var t = vroot().querySelector('table.dt'); if (t) { CACC.tableTools.download(viewKey + '.csv', CACC.tableTools.toCSV(t), 'text/csv'); CACC.toast('Exported CSV.'); } else CACC.toast('No table to export here.', true); }),
-        btn('print', 'Print', function () { window.print(); }),
-        btn('settings', 'Columns', function () { var b = Array.prototype.find.call(vroot().querySelectorAll('.gridbar button'), function (x) { return /Columns/.test(x.textContent); }); if (b) b.click(); else openPageSettings(); }),
-        btn('gauge', 'Density', function () { CACC.toggleDensity(); }),
-        btn('filter', 'Filters', function () { openFilters(); }),
-        btn('product', 'Drill-down', function () { drillExplorer(); }),
-        btn('spark', 'AI insights', function () { var p = vroot().querySelector('.ai-panel'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'center' }); else CACC.toast('No AI panel on this page.'); }),
-        btn('expand', 'Fullscreen', function () { document.body.classList.toggle('fullscreen'); }),
-        btn('link', 'Copy link', function () { try { navigator.clipboard.writeText(location.href); CACC.toast('Page link copied.'); } catch (e) { CACC.toast('Copy failed.', true); } }),
-        btn('info', 'About', function () { openAbout(viewKey, view); })
-      ])
+    function group(label, items) { return el('div', { class: 'ap-group' }, [el('div', { class: 'ap-group-items' }, items), el('div', { class: 'ap-group-label', text: label })]); }
+    var tabs = [
+      { name: 'Home', groups: [
+        group('Page', [btn('refresh', 'Refresh', function () { CACC.rerender(); CACC.toast('Refreshed.'); }), btn('print', 'Print', function () { window.print(); })]),
+        group('Data', [btn('list', 'Export to Excel', function () { var t = vroot().querySelector('table.dt'); if (t) { CACC.tableTools.download(viewKey + '.csv', CACC.tableTools.toCSV(t), 'text/csv'); CACC.toast('Exported CSV.'); } else CACC.toast('No grid to export here.', true); }), btn('filter', 'Filters', function () { openFilters(); }), btn('product', 'Drill-down', function () { drillExplorer(); })])
+      ] },
+      { name: 'View', groups: [
+        group('Personalize', [btn('settings', 'Columns', function () { var b = Array.prototype.find.call(vroot().querySelectorAll('.gridbar button'), function (x) { return /Columns/.test(x.textContent); }); if (b) b.click(); else openPageSettings(); }), btn('gauge', 'Density', function () { CACC.toggleDensity(); })]),
+        group('Layout', [btn('expand', 'Full screen', function () { document.body.classList.toggle('fullscreen'); CACC.toast(document.body.classList.contains('fullscreen') ? 'Full screen on.' : 'Full screen off.'); }), btn('spark', 'AI insights', function () { var p = vroot().querySelector('.ai-panel'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'center' }); else CACC.toast('No AI panel here.'); })])
+      ] },
+      { name: 'Options', groups: [
+        group('Share', [btn('link', 'Copy link', function () { try { navigator.clipboard.writeText(location.href); CACC.toast('Page link copied.'); } catch (e) { CACC.toast('Copy failed.', true); } }), btn('settings', 'Display settings', openPageSettings)]),
+        group('Help', [btn('info', 'About this page', function () { openAbout(viewKey, view); })])
+      ] }
+    ];
+    var tabsRow = el('div', { class: 'ap-tabs' }), bar = el('div', { class: 'ap-bar' });
+    function show(i) { tabsRow.querySelectorAll('.ap-tab').forEach(function (t, j) { t.classList.toggle('active', j === i); }); clear(bar); tabs[i].groups.forEach(function (g) { bar.appendChild(g); }); }
+    tabs.forEach(function (t, i) { tabsRow.appendChild(el('button', { class: 'ap-tab' + (i === 0 ? ' active' : ''), text: t.name, onclick: function () { show(i); } })); });
+    var pane = el('div', { class: 'actionpane' }, [
+      el('div', { class: 'ap-head' }, [tabsRow, el('div', { class: 'ap-record' }, [el('strong', { text: view.title }), el('span', { class: 'muted', text: '  ·  ' + (CACC.model ? CACC.model.filterLabel() : '') })])]),
+      bar
     ]);
+    show(0);
+    return pane;
   }
   function openPageSettings() {
     ui.window('Display settings', [

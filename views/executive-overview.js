@@ -14,6 +14,23 @@
 
       c.appendChild(filterBanner(d.group));
 
+      // Workspace tiles (D365-style)
+      var wo = M.workOrders().totals, ap = M.accountsPayable(), arr = M.accountsReceivable(), res = M.reserve().totals, qc = M.qualityByCategory();
+      var pendingCv = M.costVersions().filter(function (v) { return v.status === 'Pending'; }).length;
+      function tile(count, label, sub, key, tone) {
+        return el('button', { class: 'tile ' + (tone || ''), onclick: function () { CACC.navigate(key); } },
+          [el('div', { class: 'tile-count', text: count }), el('div', { class: 'tile-label', text: label }), sub ? el('div', { class: 'tile-sub', text: sub }) : null]);
+      }
+      c.appendChild(el('div', { class: 'section-title', text: 'Workspaces' }));
+      c.appendChild(el('div', { class: 'tiles' }, [
+        tile(String(wo.open), 'Open work orders', fmt.money0(wo.wipBalance) + ' WIP', 'workOrders', wo.open ? 'warn' : ''),
+        tile(String(ap.openCount), 'Open payables', fmt.money0(ap.total), 'accountsPayable'),
+        tile(String(arr.openCount), 'Open receivables', fmt.money0(arr.total), 'accountsReceivable'),
+        tile(String(res.itemsReserved), 'Items reserved', fmt.money0(res.combinedReserve), 'inventoryReserve', res.itemsReserved ? 'warn' : ''),
+        tile(String(qc.events.length), 'Quality events', fmt.money0(qc.total), 'costOfQuality', qc.failure > qc.conformance ? 'bad' : ''),
+        tile(String(pendingCv), 'Pending cost versions', 'awaiting approval', 'costVersions', pendingCv ? 'warn' : '')
+      ]));
+
       // KPI row
       var nv = k.netVariance, nvCls = CACC.VarianceEngine.classify(nv);
       c.appendChild(el('div', { class: 'grid g4' }, [

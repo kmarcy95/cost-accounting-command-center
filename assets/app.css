@@ -271,6 +271,12 @@ table.pivot td.rowhead { font-weight: 600; }
 .detailhead { margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
 .detail-title { font-size: 21px; font-weight: 700; letter-spacing: -.01em; }
 .detail-sub { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+.rec-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; }
+.rec-title { font-size: 16px; font-weight: 700; }
+.rec-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+.rec-facts { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+.rec-fact-l { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
+.rec-fact-v { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* ---------- D365 F&O chrome ---------- */
 :root[data-theme="light"] .topbar { background: #0f2545; border-bottom: 1px solid #0f2545; }
@@ -282,9 +288,21 @@ table.pivot td.rowhead { font-weight: 600; }
 :root[data-theme="light"] .pill-env { background: #1b3a64; color: #dbe6f5; border-color: #2c4f82; }
 :root[data-theme="light"] .tick-k { color: #9db4d6; }
 :root[data-theme="light"] .tick-v { color: #ffffff; }
-/* Action pane (page command bar) like D365 */
-.pagebar { border-radius: 0; border-left: 0; border-right: 0; border-top: 0; box-shadow: none; background: var(--surface); padding: 6px 6px; margin-bottom: 16px; }
 .pbtn { border-radius: 3px; }
+/* D365 tabbed action pane */
+.actionpane { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; box-shadow: var(--shadow-sm); overflow: hidden; }
+.ap-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); background: var(--n-50); }
+.ap-tabs { display: flex; }
+.ap-tab { font-family: inherit; font-size: 13px; font-weight: 600; color: var(--text-muted); background: transparent; border: 0; border-bottom: 2px solid transparent; padding: 9px 16px; cursor: pointer; }
+.ap-tab:hover { color: var(--text); }
+.ap-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--surface); }
+.ap-record { padding-right: 14px; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ap-bar { display: flex; flex-wrap: wrap; padding: 6px 2px; }
+.ap-group { display: flex; flex-direction: column; align-items: center; padding: 2px 12px; border-right: 1px solid var(--border); }
+.ap-group:last-child { border-right: 0; }
+.ap-group-items { display: flex; gap: 2px; flex-wrap: wrap; }
+.ap-group-label { font-size: 10.5px; color: var(--text-muted); margin-top: 3px; }
+@media (max-width: 920px) { .ap-record { display: none; } .ap-group-label { display: none; } }
 
 /* ---------- FastTabs ---------- */
 .fasttabs { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
@@ -323,6 +341,18 @@ body.fullscreen .content { max-width: none; }
 /* ---------- Personalizable grid ---------- */
 .gridbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-bottom: 1px solid var(--border); }
 table.dt tbody tr.grp td { background: var(--n-100); font-size: 12px; color: var(--text-dim); border-top: 2px solid var(--border-strong); text-transform: none; }
+table.dt thead tr.filterrow th { padding: 4px 8px; background: var(--surface); }
+table.dt thead tr.filterrow input { width: 100%; min-width: 60px; font-family: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--surface); color: var(--text); }
+
+/* ---------- D365 workspace tiles ---------- */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.tile { text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; cursor: pointer; font-family: inherit; color: var(--text);
+  border-top: 3px solid var(--accent); transition: box-shadow .12s, transform .12s; }
+.tile:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.tile-count { font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
+.tile-label { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
+.tile-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 3px; }
+.tile.warn { border-top-color: var(--warn); } .tile.bad { border-top-color: var(--bad); } .tile.good { border-top-color: var(--good); }
 
 /* ---------- Density (compact) ---------- */
 :root[data-density="compact"] table.dt th, :root[data-density="compact"] table.dt td { padding: 5px 10px; font-size: 12.5px; }
