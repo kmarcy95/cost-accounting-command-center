@@ -1,0 +1,19 @@
+# Cost Accounting Command Center
+
+Project-specific context. Global preferences + project index live in `C:\Users\keyst\CLAUDE.md`. Keep this file in sync with the `project_cost_accounting_command_center.md` memory entry.
+
+- **Path:** `C:\Users\keyst\cost-accounting-command-center`
+- **Repo:** github.com/kmarcy95/cost-accounting-command-center (public)
+- **Live:** https://kmarcy95.github.io/cost-accounting-command-center/ — GitHub Pages via **Actions workflow** (`.github/workflows/pages.yml`, `build_type=workflow`). `.nojekyll` present, all asset paths relative (serves from the `/cost-accounting-command-center/` subpath). Push to `main` redeploys.
+- **What it is:** AI-assisted manufacturing cost accounting web app — "everything a consultant needs stepping into a cost accounting role at a manufacturer." Built 2026-06-04 (brainstorm → plan → TDD → deploy).
+- **Stack:** Vanilla JS, **no framework, no build**. UMD/IIFE modules attach to a single `window.CACC` namespace. Chart.js 4.4.1 via CDN (**SRI-pinned** `sha384-9nhcz…urn4` + `crossorigin`). Fluent / Dynamics 365 **light** theme (accent `#0f6cbd`, slate ramp, Segoe UI, tabular-nums on data).
+- **Architecture:**
+  - `engines/` — **pure, DOM-free, unit-tested** math: `cost-variance-engine.js` (copied from Business-Landing-Page, sign convention **positive = Unfavorable**), `product-costing-engine.js` (job-order / weighted-avg process / ABC), `inventory-engine.js` (FIFO/LIFO/WAC valuation + RM→WIP→FG→COGS cost flow + OH absorption), `cvp-engine.js`, `diagnostic-engine.js` (weighted 5-dimension health score).
+  - `assets/` — `seed-data.js` (**Stratton Manufacturing Co.** demo dataset), `store.js` (LS helper + state + `fmt`/`dom` utils), `model.js` (maps stored data → engine inputs; single derive layer reused by views + AI), `app.js` (icons, `CACC.ui` builders, router, chart lifecycle, `CACC.boot`), `app.css`.
+  - `ai/` — `insights.js` (deterministic, always-on analyst narratives + `buildPrompt`), `claude-client.js` (optional BYO-key live Claude via direct browser fetch w/ `anthropic-dangerous-direct-browser-access`; graceful fallback).
+  - `views/` — one render module per screen (dashboard, standardCosting, productCosting, inventory, cvp, diagnostic, settings); register into `CACC.views`.
+  - `tests/` — `node --test tests/*.test.js` (**26 tests**; glob form required on Node 24/Win).
+- **AI = hybrid:** deterministic insights work fully offline; paste an Anthropic key in **Settings** → panels upgrade to live Claude. Key stored only in `localStorage`, sent only to api.anthropic.com.
+- **GOTCHA — script load order** (`index.html`): engines → seed → store → model → ai → **app.js (defines `CACC.ui`)** → views → `CACC.boot()`. Views alias `var ui = CACC.ui` at load, so **app.js MUST load before the views**, and boot is called by an inline script after all views register (not auto-run).
+- **Verification done:** 26 engine unit tests pass; jsdom smoke test renders all 7 views; headless Chrome renders local + live with no app errors and the Chart.js bridge drawing.
+- **Rules:** edit in place; engines stay pure + tested; reuse the variance engine's sign convention; keep this file + the memory entry in sync.
