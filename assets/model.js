@@ -25,6 +25,16 @@
       var ab = d().inventory.absorption;
       return CACC.InventoryEngine.overheadAbsorption(ab.predeterminedRate, ab.actualActivity, ab.actualOverhead);
     },
+    reserve: function () { return CACC.InventoryReserveEngine.analyzePortfolio(d().items, d().reservePolicy); },
+    bomRollup: function (item) {
+      var lines = (item.bom || []).map(function (c) {
+        return { sku: c.sku, description: c.description, qty: c.qty, unitCost: c.unitCost, extended: Math.round(c.qty * c.unitCost * 100) / 100 };
+      });
+      var total = Math.round(lines.reduce(function (s, l) { return s + l.extended; }, 0) * 100) / 100;
+      return { lines: lines, total: total };
+    },
+    journal: function () { return CACC.JournalEntriesEngine.build(d().standardCosting, model.reserve().totals.combinedReserve); },
+
     cvpSingle: function () { return CACC.CvpEngine.singleProduct(d().cvp.single); },
     cvpMulti: function () {
       var m = d().cvp.multi;
@@ -83,7 +93,19 @@
           multiWeightedCm: model.cvpMulti().weightedAvgCm, multiBreakEven: model.cvpMulti().breakEvenPackages
         };
       },
-      diagnostic: function () { return { company: d().company, diagnostic: model.diagnostic() }; }
+      diagnostic: function () { return { company: d().company, diagnostic: model.diagnostic() }; },
+      inventoryReserve: function () {
+        var r = model.reserve();
+        var top = r.items.slice().filter(function (x) { return x.combinedReserve > 0; })
+          .sort(function (a, b) { return b.combinedReserve - a.combinedReserve; })[0] || null;
+        return { company: d().company, reserve: r, topReserveItem: top };
+      },
+      itemMaster: function () {
+        var r = model.reserve();
+        return { company: d().company, itemCount: d().items.length,
+          totalGross: r.totals.grossValue, totalNet: r.totals.netValue, reserve: r };
+      },
+      journal: function () { return { company: d().company, journal: model.journal() }; }
     }
   };
 

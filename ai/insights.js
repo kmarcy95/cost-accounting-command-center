@@ -143,6 +143,57 @@
           ? d.recommendations.map(function (r) { return '[' + r.priority + '] ' + r.area + ': ' + r.text; })
           : d.dimensions.map(function (x) { return x.label + ': ' + x.score + '/100.'; })
       };
+    },
+
+    inventoryReserve: function (c) {
+      var t = c.reserve.totals, top = c.topReserveItem;
+      return {
+        headline: 'Inventory reserve analysis',
+        paragraphs: [
+          'Across ' + c.reserve.items.length + ' items, gross inventory of ' + fmt.money0(t.grossValue) +
+          ' carries a combined reserve of ' + fmt.money0(t.combinedReserve) + ' (' + fmt.pct(t.reservePct * 100) +
+          '), leaving a net realizable value of ' + fmt.money0(t.netValue) + '. The reserve splits into ' +
+          fmt.money0(t.nrvReserve) + ' of lower-of-cost-or-NRV write-downs and ' + fmt.money0(t.eoReserve) +
+          ' of excess & obsolete provision.',
+          top ? 'The single largest exposure is ' + top.sku + ' (' + top.description + ') at ' +
+            fmt.money0(top.combinedReserve) + ' — ' + (top.nrvWritedownUnit > 0 ? 'its cost exceeds NRV' : 'it is slow-moving/excess') +
+            '. ' + t.itemsReserved + ' of ' + c.reserve.items.length + ' items require a reserve.'
+            : 'No items currently require a reserve — inventory is carried at or below NRV with healthy turns.'
+        ],
+        bullets: c.reserve.items.slice().sort(function (a, b) { return b.combinedReserve - a.combinedReserve; })
+          .slice(0, 4).map(function (r) {
+            return r.sku + ': reserve ' + fmt.money0(r.combinedReserve) + ' (' + fmt.pct(r.reservePct * 100) + ' of ' + fmt.money0(r.grossValue) + ')';
+          })
+      };
+    },
+
+    itemMaster: function (c) {
+      var t = c.reserve.totals;
+      return {
+        headline: 'Item master overview',
+        paragraphs: [
+          c.itemCount + ' SKUs are tracked with a gross carrying value of ' + fmt.money0(t.grossValue) +
+          ' and a net value of ' + fmt.money0(t.netValue) + ' after reserves. Drill into any SKU for its cost build-up, BOM roll-up, aging and reserve detail.',
+          t.itemsReserved + ' SKU(s) carry a valuation reserve. Watch finished goods with low demand coverage and raw materials whose NRV has fallen below cost.'
+        ],
+        bullets: c.reserve.byCategory.map(function (g) {
+          return g.category + ': gross ' + fmt.money0(g.grossValue) + ' · net ' + fmt.money0(g.netValue) +
+            ' · reserve ' + fmt.money0(g.combinedReserve);
+        })
+      };
+    },
+
+    journal: function (c) {
+      var j = c.journal;
+      return {
+        headline: 'Period journal entries',
+        paragraphs: [
+          j.entries.length + ' standard-cost journal entries post a total of ' + fmt.money0(j.totalDebits) +
+          ' in debits against equal credits — the books ' + (j.allBalanced ? 'are in balance.' : 'do NOT balance; review.'),
+          'Variances are isolated to dedicated accounts at the point of incurrence (price at purchase, quantity at issue, rate & efficiency at labor recording), which is what lets management act on them before month-end.'
+        ],
+        bullets: j.entries.map(function (e) { return e.ref + ' — ' + e.memo + ': ' + fmt.money0(e.debit); })
+      };
     }
   };
 

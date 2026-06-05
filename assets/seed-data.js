@@ -72,6 +72,49 @@
       absorption: { predeterminedRate: 25, actualActivity: 2000, actualOverhead: 54000 }
     },
 
+    /* ---- Item master (drill-down catalog) + multi-item reserve inputs ---- */
+    reservePolicy: {
+      coverageMonths: 12,
+      buckets: [
+        { maxDays: 90, pct: 0, label: '0–90 days (current)' },
+        { maxDays: 180, pct: 0.25, label: '91–180 days' },
+        { maxDays: 365, pct: 0.50, label: '181–365 days' },
+        { maxDays: 100000, pct: 1.0, label: 'Over 365 days' }
+      ]
+    },
+    items: [
+      { sku: 'GX-200', description: 'GX-200 Industrial Gearbox', category: 'Finished goods', type: 'fg',
+        qtyOnHand: 800, unitCost: 145, sellingPrice: 210, costToComplete: 0, costToSell: 12,
+        annualDemand: 6000, agingDays: 40,
+        bom: [
+          { sku: 'RM-1140', description: 'Cast steel housing', qty: 1, unitCost: 42 },
+          { sku: 'RM-2210', description: 'Bronze bushing', qty: 4, unitCost: 3.5 },
+          { sku: 'RM-3000', description: 'Electronic controller', qty: 1, unitCost: 88 },
+          { sku: 'LBR-01', description: 'Assembly labor', qty: 1.5, unitCost: 20 }
+        ] },
+      { sku: 'GX-450', description: 'GX-450 Heavy-Duty Gearbox', category: 'Finished goods', type: 'fg',
+        qtyOnHand: 1500, unitCost: 320, sellingPrice: 360, costToComplete: 5, costToSell: 20,
+        annualDemand: 900, agingDays: 200,
+        bom: [
+          { sku: 'RM-1140', description: 'Cast steel housing', qty: 2, unitCost: 42 },
+          { sku: 'RM-2210', description: 'Bronze bushing', qty: 8, unitCost: 3.5 },
+          { sku: 'RM-3000', description: 'Electronic controller', qty: 2, unitCost: 88 },
+          { sku: 'LBR-01', description: 'Assembly labor', qty: 3, unitCost: 20 }
+        ] },
+      { sku: 'GX-110', description: 'GX-110 Legacy Gearbox (discontinued)', category: 'Finished goods', type: 'fg',
+        qtyOnHand: 300, unitCost: 180, sellingPrice: 120, costToComplete: 0, costToSell: 10,
+        annualDemand: 0, agingDays: 420, bom: [] },
+      { sku: 'RM-1140', description: 'Cast steel housing', category: 'Raw materials', type: 'raw',
+        qtyOnHand: 4000, unitCost: 42, sellingPrice: 38, costToComplete: 0, costToSell: 2,
+        annualDemand: 18000, agingDays: 60, bom: [] },
+      { sku: 'RM-2210', description: 'Bronze bushing', category: 'Raw materials', type: 'raw',
+        qtyOnHand: 9000, unitCost: 3.5, sellingPrice: 4.2, costToComplete: 0, costToSell: 0,
+        annualDemand: 5000, agingDays: 95, bom: [] },
+      { sku: 'RM-3000', description: 'Electronic controller', category: 'Raw materials', type: 'raw',
+        qtyOnHand: 600, unitCost: 88, sellingPrice: 95, costToComplete: 0, costToSell: 0,
+        annualDemand: 2400, agingDays: 25, bom: [] }
+    ],
+
     /* ---- CVP & Break-Even ---- */
     cvp: {
       single: { productName: 'GX-200 Gearbox', price: 100, variableCost: 60, fixedCost: 200000, actualUnits: 8000, targetProfit: 50000 },

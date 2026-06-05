@@ -37,6 +37,10 @@
           <div class="crumb" id="viewCrumb"></div>
         </div>
         <div class="topbar-actions">
+          <div class="ticker" id="ticker" aria-label="Key metrics"></div>
+          <button class="cmd-btn" onclick="window.CACC.openPalette()" aria-label="Open command palette">
+            <span>Jump</span><kbd>Ctrl K</kbd>
+          </button>
           <span class="pill-env">Demo · seeded data</span>
         </div>
       </header>
@@ -50,6 +54,8 @@
   <script src="engines/inventory-engine.js"></script>
   <script src="engines/cvp-engine.js"></script>
   <script src="engines/diagnostic-engine.js"></script>
+  <script src="engines/inventory-reserve-engine.js"></script>
+  <script src="engines/journal-entries-engine.js"></script>
   <!-- Data + store + derived model -->
   <script src="assets/seed-data.js"></script>
   <script src="assets/store.js"></script>
@@ -64,7 +70,10 @@
   <script src="views/standard-costing.js"></script>
   <script src="views/product-costing.js"></script>
   <script src="views/inventory.js"></script>
+  <script src="views/inventory-reserve.js"></script>
   <script src="views/cvp.js"></script>
+  <script src="views/item-master.js"></script>
+  <script src="views/journal.js"></script>
   <script src="views/diagnostic.js"></script>
   <script src="views/settings.js"></script>
   <!-- Boot after everything is registered -->
