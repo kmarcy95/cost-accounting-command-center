@@ -298,6 +298,33 @@
         bullets: c.byProduct.map(function (x) { return x.name + ': ' + fmt.money0(x.grossProfit) + ' GP (' + fmt.pct(x.marginPct * 100) + ')'; })
           .concat(c.topCustomers.slice(0, 3).map(function (x) { return 'Customer ' + x.name + ': ' + fmt.money0(x.grossProfit) + ' GP'; }))
       };
+    },
+
+    procurement: function (c) {
+      var top = c.suppliers[0];
+      return {
+        headline: 'Procurement & supplier spend',
+        paragraphs: [
+          'For ' + c.filter + ', purchase-order spend totals ' + fmt.money0(c.totals.total) + ' across ' + c.totals.orders +
+          ' orders and ' + c.totals.suppliers + ' suppliers. ' + (top ? top.name + ' is the largest vendor at ' + fmt.money0(top.amount) +
+          ' (' + fmt.pct(c.totals.total ? top.amount / c.totals.total * 100 : 0) + ' of spend).' : ''),
+          c.totals.openCount + ' open PO(s) commit ' + fmt.money0(c.totals.openValue) + ' of future cash. Concentrate negotiation on the top vendors and confirm open commitments against demand before period close.'
+        ],
+        bullets: c.suppliers.slice(0, 5).map(function (s) { return s.name + ': ' + fmt.money0(s.amount) + ' · ' + s.orders + ' orders' + (s.openAmount ? ' · ' + fmt.money0(s.openAmount) + ' open' : ''); })
+      };
+    },
+
+    projects: function (c) {
+      var t = c.totals, worst = c.projects.slice().sort(function (a, b) { return a.margin - b.margin; })[0];
+      return {
+        headline: 'Project operations',
+        paragraphs: [
+          'For ' + c.filter + ', ' + t.count + ' projects carry ' + fmt.money0(t.budget) + ' of budget with ' + fmt.money0(t.actualCost) +
+          ' incurred and ' + fmt.money0(t.billed) + ' billed — a ' + fmt.pct(t.marginPct * 100) + ' project margin. ' + t.atRisk + ' project(s) are at risk (over budget or negative margin).',
+          worst ? worst.name + ' is the weakest at ' + fmt.money0(worst.margin) + ' margin (' + fmt.pct(worst.pctComplete * 100) + ' complete) — review scope, billing, and estimate-at-completion.' : 'All projects are tracking to plan.'
+        ],
+        bullets: c.projects.map(function (p) { return p.id + ' ' + p.name + ': margin ' + fmt.money0(p.margin) + ' · ' + fmt.pct(p.pctComplete * 100) + ' complete · ' + p.status; })
+      };
     }
   };
 

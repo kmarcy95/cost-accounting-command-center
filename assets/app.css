@@ -50,7 +50,7 @@
   --accent: #38bdf8; --accent-strong: #0ea5e9; --accent-weak: #0b2942; --accent-ghost: #0e1b27;
   --n-0: #0f1620; --n-50: #121c27; --n-100: #16212e; --n-150: #1a2632; --n-200: #22303f;
   --n-300: #2c3c4e; --n-400: #5b6b7a; --n-500: #7e8c9a; --n-600: #94a3b1; --n-700: #aebac7; --n-800: #cdd7e1; --n-900: #e6edf3;
-  --bg: #0a0e14; --surface: #0f1620; --text: #e6edf3; --text-dim: #aebac7; --text-muted: #8593a0;
+  --bg: #0a0e17; --surface: #111826; --text: #e6edf3; --text-dim: #aebac7; --text-muted: #8593a0;
   --border: #1e2a38; --border-strong: #2c3c4e;
   --good: #34d399; --good-bg: #0e2a22; --bad: #f87171; --bad-bg: #2c1517; --warn: #fbbf24; --warn-bg: #2a2110;
   --shadow-sm: 0 1px 2px rgba(0,0,0,.5); --shadow-md: 0 4px 14px rgba(0,0,0,.55); --shadow-lg: 0 14px 36px rgba(0,0,0,.65);
@@ -280,7 +280,23 @@ table.pivot td.rowhead { font-weight: 600; }
 .cmd-row.sel, .cmd-row:hover { background: var(--accent-weak); }
 .cmd-row.sel { box-shadow: inset 0 0 0 1px var(--accent); }
 
-/* ---------- Drill-down modal ---------- */
+/* ---------- Non-blocking floating windows ---------- */
+#winlayer { position: fixed; inset: 0; pointer-events: none; z-index: 1050; }
+.win { position: absolute; pointer-events: auto; width: min(900px, 94vw); max-height: 84vh; display: flex; flex-direction: column;
+  background: var(--bg); border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: var(--shadow-lg); overflow: hidden; }
+.win-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px 10px 16px;
+  background: var(--surface); border-bottom: 1px solid var(--border); cursor: move; user-select: none; }
+.win-title { font-weight: 700; font-size: 15px; }
+.win-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+.win-btns { display: flex; gap: 6px; flex: none; }
+.win-btn { width: 26px; height: 26px; border: 0; border-radius: 6px; background: var(--n-100); color: var(--text-dim); cursor: pointer; font-size: 16px; line-height: 1; }
+.win-btn:hover { background: var(--n-200); }
+.win-x:hover { background: var(--bad-bg); color: var(--bad); }
+.win-body { padding: 16px 16px 18px; overflow: auto; }
+.win.min { width: 360px !important; }
+.win.min .win-body { display: none; }
+
+/* ---------- Drill-down modal (legacy, kept for any blocking uses) ---------- */
 .modal-scrim { position: fixed; inset: 0; background: rgba(15, 23, 42, .5); z-index: 1050; display: flex; justify-content: center; align-items: flex-start; padding: 6vh 16px 16px; overflow-y: auto; }
 .modal { width: min(880px, 96vw); background: var(--bg); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg); }
 .modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 22px; border-bottom: 1px solid var(--border); background: var(--surface); border-radius: 14px 14px 0 0; }

@@ -120,6 +120,37 @@
         return x;
       });
     },
+    /* ---- Procurement (Supply Chain) ---- */
+    filteredPOs: function () {
+      var f = CACC.store.getFilter();
+      return (d().purchaseOrders || []).filter(function (p) { return (f.plantId === 'ALL' || p.plantId === f.plantId) && (f.period === 'ALL' || p.date === f.period); });
+    },
+    supplierSpend: function () {
+      var rows = model.filteredPOs(), map = {};
+      rows.forEach(function (p) { if (!map[p.supplierId]) map[p.supplierId] = { id: p.supplierId, name: p.supplier, amount: 0, orders: 0, openAmount: 0 }; map[p.supplierId].amount += p.amount; map[p.supplierId].orders += 1; if (p.status === 'Open') map[p.supplierId].openAmount += p.amount; });
+      return Object.keys(map).map(function (k) { var s = map[k]; s.amount = r2(s.amount); s.openAmount = r2(s.openAmount); return s; }).sort(function (a, b) { return b.amount - a.amount; });
+    },
+    procurementTotals: function () {
+      var rows = model.filteredPOs();
+      var total = rows.reduce(function (s, p) { return s + p.amount; }, 0);
+      var open = rows.filter(function (p) { return p.status === 'Open'; });
+      return { total: r2(total), orders: rows.length, openCount: open.length, openValue: r2(open.reduce(function (s, p) { return s + p.amount; }, 0)), suppliers: model.supplierSpend().length };
+    },
+
+    /* ---- Project Operations ---- */
+    projects: function () {
+      var f = CACC.store.getFilter();
+      return (d().projects || []).filter(function (p) { return f.plantId === 'ALL' || p.plantId === f.plantId; });
+    },
+    projectTotals: function () {
+      var rows = model.projects();
+      var t = rows.reduce(function (a, p) { a.budget += p.budget; a.actualCost += p.actualCost; a.billed += p.billed; a.margin += p.margin; return a; }, { budget: 0, actualCost: 0, billed: 0, margin: 0 });
+      Object.keys(t).forEach(function (k) { t[k] = r2(t[k]); });
+      t.count = rows.length; t.marginPct = t.billed ? r4(t.margin / t.billed) : 0;
+      t.atRisk = rows.filter(function (p) { return p.margin < 0 || p.actualCost > p.budget; }).length;
+      return t;
+    },
+
     filterLabel: function () {
       var f = CACC.store.getFilter();
       var p = (d().plants || []).filter(function (x) { return x.id === f.plantId; })[0];
@@ -233,6 +264,8 @@
           plants: model.plantScorecard(), topCustomers: model.topCustomers(5) };
       },
       budget: function () { return { group: d().group, filter: model.filterLabel(), categories: model.budgetByCategory() }; },
+      procurement: function () { return { group: d().group, filter: model.filterLabel(), totals: model.procurementTotals(), suppliers: model.supplierSpend() }; },
+      projects: function () { return { group: d().group, filter: model.filterLabel(), totals: model.projectTotals(), projects: model.projects() }; },
       profitabilityCube: function () {
         return { group: d().group, filter: model.filterLabel(), kpis: model.execKpis(), topCustomers: model.topCustomers(5),
           byProduct: CACC.CubeEngine.groupBy(model.filtered(), 'sku', 'productName').sort(function (a, b) { return b.grossProfit - a.grossProfit; }) };

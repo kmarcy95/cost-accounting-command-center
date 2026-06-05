@@ -275,6 +275,44 @@
       });
     });
     SEED.budget = budget;
+
+    // Procurement (Supply Chain) — suppliers + purchase orders
+    var supplierNames = ['Texas Steel Co', 'Borderland Castings', 'Gulf Metals Supply', 'Apex Components', 'Precision Forgings', 'Rio Grande Alloys'];
+    SEED.suppliers = supplierNames.map(function (n, i) { return { id: 'SUP-' + (i + 1), name: n, category: i % 2 ? 'Castings & forgings' : 'Raw metals' }; });
+    var pos = [], pid = 8000;
+    SEED.periods.forEach(function (period, pi) {
+      SEED.plants.forEach(function (plant) {
+        SEED.products.forEach(function (prod) {
+          var seed = period + plant.id + prod.sku + 'po';
+          var sup = SEED.suppliers[hash(seed) % SEED.suppliers.length];
+          var qty = Math.round(prod.baseVol * (plant.factor / sumFactor) * jit(seed + 'q', 0.7, 1.1));
+          if (qty < 1) return;
+          var uc = r2(prod.stdUnitCost * 0.55 * jit(seed + 'c', 0.95, 1.08));
+          var status = pi === SEED.periods.length - 1 ? (rand(seed + 's') > 0.5 ? 'Open' : 'Received') : (rand(seed + 's') > 0.3 ? 'Closed' : 'Received');
+          pos.push({ id: 'PO-' + (pid++), date: period, plantId: plant.id, plantName: plant.name, supplierId: sup.id, supplier: sup.name, sku: prod.sku, productName: prod.name, qty: qty, unitCost: uc, amount: r2(qty * uc), status: status });
+        });
+      });
+    });
+    SEED.purchaseOrders = pos;
+
+    // Project Operations — projects with budget / actual / billing / completion
+    var projDefs = [
+      ['Permian Pumping Upgrade', 'PERM', 'SA'], ['Gulf Marine Retrofit', 'GULF', 'RF'], ['Sooner Field Automation', 'SOON', 'OKC'],
+      ['Rio Hydraulics Expansion', 'RIO', 'MTY'], ['Servo Line Tooling', 'SERV', 'MTY'], ['Permian Phase II', 'PERM', 'SA'],
+      ['Gulf Coast Overhaul', 'GULF', 'RF'], ['OKC Plant Modernization', 'SOON', 'OKC']
+    ];
+    SEED.projects = projDefs.map(function (p, i) {
+      var seed = 'proj' + i;
+      var budget = r2(jit(seed + 'b', 180000, 1200000));
+      var pct = Math.round(jit(seed + 'p', 0.2, 1.0) * 100) / 100;
+      var actual = r2(budget * pct * jit(seed + 'a', 0.92, 1.18));
+      var billed = r2(actual * jit(seed + 'bi', 0.85, 1.12));
+      var status = pct >= 1 ? 'Complete' : pct < 0.35 ? 'Planning' : 'In progress';
+      var cust = SEED.customers.filter(function (c) { return c.id === p[1]; })[0];
+      var plant = SEED.plants.filter(function (pl) { return pl.id === p[2]; })[0];
+      return { id: 'PRJ-' + (1001 + i), name: p[0], customerId: p[1], customer: cust ? cust.name : p[1], plantId: p[2], plantName: plant ? plant.name : p[2],
+        budget: budget, actualCost: actual, billed: billed, pctComplete: pct, status: status, margin: r2(billed - actual) };
+    });
   })();
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = SEED; }

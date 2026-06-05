@@ -21,7 +21,9 @@
     list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
     ledger: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
     search: '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
-    warning: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+    warning: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+    truck: '<rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+    briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>'
   };
   function icon(name, cls) {
     var span = el('span', { class: cls || '' });
@@ -88,29 +90,9 @@
       }
       return panel;
     },
-    /* Drill-down modal overlay. title:string, bodyNodes:Node|[Node]. Returns close fn. */
-    modal: function (title, bodyNodes, subtitle) {
-      var prevFocus = document.activeElement;
-      function close() {
-        document.removeEventListener('keydown', onKey);
-        overlay.remove();
-        if (prevFocus && prevFocus.focus) prevFocus.focus();
-      }
-      function onKey(e) { if (e.key === 'Escape') close(); }
-      var closeBtn = el('button', { class: 'modal-close', 'aria-label': 'Close', html: '&times;', onclick: close });
-      var dialog = el('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, [
-        el('div', { class: 'modal-head' }, [
-          el('div', {}, [el('div', { class: 'modal-title', text: title }), subtitle ? el('div', { class: 'modal-sub', text: subtitle }) : null]),
-          closeBtn
-        ]),
-        el('div', { class: 'modal-body' }, bodyNodes)
-      ]);
-      var overlay = el('div', { class: 'modal-scrim', onclick: function (e) { if (e.target === overlay) close(); } }, [dialog]);
-      document.body.appendChild(overlay);
-      document.addEventListener('keydown', onKey);
-      closeBtn.focus();
-      return close;
-    },
+    /* Drill-downs open as NON-BLOCKING floating windows (draggable, multiple at once). */
+    modal: function (title, bodyNodes, subtitle) { return floatingWindow(title, bodyNodes, subtitle); },
+    window: function (title, bodyNodes, subtitle) { return floatingWindow(title, bodyNodes, subtitle); },
     /* Build the SKU drill-down detail nodes (lowest level). row=reserve analysis, raw=seed item. */
     itemDetail: function (row, raw) {
       function kv(rows) {
@@ -284,6 +266,52 @@
     return function (evt, els) { if (els && els.length) cb(els[0].index, els[0].datasetIndex); };
   };
 
+  /* ---------- Non-blocking floating windows ---------- */
+  var winCascade = 0, winZ = 1050, openWindows = [];
+  function floatingWindow(title, bodyNodes, subtitle) {
+    var layer = document.getElementById('winlayer');
+    if (!layer) { layer = el('div', { id: 'winlayer' }); document.body.appendChild(layer); }
+    var off = 56 + (winCascade % 6) * 28; winCascade++;
+    var body = el('div', { class: 'win-body' }, bodyNodes);
+    var win = el('div', { class: 'win', role: 'dialog', 'aria-label': title,
+      style: 'top:' + off + 'px; left:' + Math.min(off + 90, Math.max(20, window.innerWidth - 620)) + 'px; z-index:' + (++winZ) });
+
+    function bringToFront() { win.style.zIndex = (++winZ); }
+    var onMove, onUp;
+    function close() {
+      document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp);
+      win.remove(); openWindows = openWindows.filter(function (w) { return w !== close; });
+    }
+    var minBtn = el('button', { class: 'win-btn', title: 'Minimize', html: '&#8211;', onclick: function (e) { e.stopPropagation(); win.classList.toggle('min'); } });
+    var closeBtn = el('button', { class: 'win-btn win-x', title: 'Close', html: '&times;', onclick: function (e) { e.stopPropagation(); close(); } });
+    var head = el('div', { class: 'win-head' }, [
+      el('div', { class: 'win-titles' }, [el('div', { class: 'win-title', text: title }), subtitle ? el('div', { class: 'win-sub', text: subtitle }) : null]),
+      el('div', { class: 'win-btns' }, [minBtn, closeBtn])
+    ]);
+    win.appendChild(head); win.appendChild(body);
+    win.addEventListener('mousedown', bringToFront);
+
+    var dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+    head.addEventListener('mousedown', function (e) {
+      if (e.target.closest('.win-btn')) return;
+      dragging = true; sx = e.clientX; sy = e.clientY;
+      var r = win.getBoundingClientRect(); ox = r.left; oy = r.top;
+      document.body.style.userSelect = 'none'; e.preventDefault();
+    });
+    onMove = function (e) {
+      if (!dragging) return;
+      var nx = Math.max(0, Math.min(window.innerWidth - 80, ox + (e.clientX - sx)));
+      var ny = Math.max(0, Math.min(window.innerHeight - 36, oy + (e.clientY - sy)));
+      win.style.left = nx + 'px'; win.style.top = ny + 'px';
+    };
+    onUp = function () { dragging = false; document.body.style.userSelect = ''; };
+    document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
+
+    layer.appendChild(win); bringToFront(); openWindows.push(close);
+    return close;
+  }
+  CACC.closeAllWindows = function () { openWindows.slice().forEach(function (close) { close(); }); };
+
   /* ---------- Nav + router ---------- */
   var NAV = [
     { key: 'executiveOverview', label: 'Executive Overview', icon: 'dashboard', section: 'Overview' },
@@ -298,6 +326,8 @@
     { key: 'cvp', label: 'CVP & Break-Even', icon: 'cvp', section: 'Cost analysis' },
     { key: 'capacity', label: 'Capacity & Overhead', icon: 'gauge', section: 'Cost analysis' },
     { key: 'profitability', label: 'Profitability', icon: 'margin', section: 'Cost analysis' },
+    { key: 'procurement', label: 'Procurement', icon: 'truck', section: 'Supply chain' },
+    { key: 'projects', label: 'Project Operations', icon: 'briefcase', section: 'Supply chain' },
     { key: 'itemMaster', label: 'Item Master', icon: 'list', section: 'Catalog' },
     { key: 'inventorySubledger', label: 'Inventory Subledger', icon: 'inventory', section: 'Ledgers' },
     { key: 'costLedger', label: 'Cost Ledger', icon: 'ledger', section: 'Ledgers' },
