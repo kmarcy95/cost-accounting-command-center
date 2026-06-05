@@ -215,6 +215,45 @@
           'Capacity: ' + fmt.pct(first.capacityPct * 100) + ' → ' + fmt.pct(last.capacityPct * 100) + '.'
         ]
       };
+    },
+
+    capacity: function (c) {
+      var x = c.capacity;
+      return {
+        headline: 'Capacity & overhead absorption',
+        paragraphs: [
+          'The plant ran ' + fmt.num(x.actualHours, 0) + ' of ' + fmt.num(x.availableHours, 0) + ' available machine hours (' +
+          fmt.pct(x.utilization * 100) + ' utilization), leaving ' + fmt.num(x.idleHours, 0) + ' idle hours. At a ' +
+          fmt.money(x.fixedRate) + '/hr fixed rate, idle capacity carries roughly ' + fmt.money0(x.idleCapacityCost) +
+          ' of unabsorbed fixed cost.',
+          'Applied overhead of ' + fmt.money0(x.appliedOH) + ' vs. actual ' + fmt.money0(x.actualOH) + ' leaves overhead ' +
+          x.absorption.label + ' by ' + fmt.money0(Math.abs(x.overUnder)) + '. The fixed-overhead volume variance is ' +
+          dollars(x.fixedOhVolume) + ' ' + fu(x.fixedOhVolume).toUpperCase() + ' — driven by producing at a different level than the denominator.'
+        ],
+        bullets: [
+          'Utilization: ' + fmt.pct(x.utilization * 100) + ' (' + fmt.num(x.idleHours, 0) + ' idle hrs).',
+          'Idle capacity cost: ' + fmt.money0(x.idleCapacityCost) + '.',
+          'Variable OH spending ' + fu(x.varOhSpending) + ', efficiency ' + fu(x.varOhEfficiency) + '.',
+          'Fixed OH budget ' + dollars(x.fixedOhBudget) + ' ' + fu(x.fixedOhBudget).toUpperCase() + ', volume ' + dollars(x.fixedOhVolume) + ' ' + fu(x.fixedOhVolume).toUpperCase() + '.'
+        ]
+      };
+    },
+
+    profitability: function (c) {
+      var p = c.profitability, top = p.products[0], bottom = p.products[p.products.length - 1];
+      return {
+        headline: 'Profitability by product',
+        paragraphs: [
+          'Annualized, the finished-goods portfolio generates ' + fmt.money0(p.totals.annualRevenue) + ' of revenue and ' +
+          fmt.money0(p.totals.annualMargin) + ' of contribution (' + fmt.pct(p.totals.marginPct * 100) + ' blended margin). ' +
+          (top ? top.sku + ' is the margin leader at ' + fmt.money0(top.annualMargin) + ' (' + fmt.pct(top.marginPct * 100) + ' unit margin).' : ''),
+          bottom && bottom !== top ? bottom.sku + ' is the weakest contributor at ' + fmt.money0(bottom.annualMargin) +
+            (bottom.unitMargin < 0 ? ' — it sells below cost and should be repriced or discontinued.' : ' — review pricing and volume.') : 'Margins are concentrated; protect the leaders and grow volume where capacity allows.'
+        ],
+        bullets: p.products.map(function (x) {
+          return x.sku + ': ' + fmt.money(x.unitMargin) + '/u (' + fmt.pct(x.marginPct * 100) + ') · annual ' + fmt.money0(x.annualMargin);
+        })
+      };
     }
   };
 

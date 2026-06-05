@@ -186,12 +186,102 @@
   };
   function destroyCharts() { CACC._charts.forEach(function (c) { try { c.destroy(); } catch (e) {} }); CACC._charts = []; }
 
-  /* Shared Chart.js defaults for the Fluent look */
+  /* Shared Chart.js defaults — theme-aware (light Fluent / dark terminal) */
   CACC.chartTheme = function () {
-    return {
-      grid: '#e2e8f0', text: '#64748b', accent: '#0f6cbd', accentSoft: 'rgba(15,108,189,.15)',
-      good: '#107c41', bad: '#c43e3e', palette: ['#0f6cbd', '#107c41', '#9a6700', '#7c5cff', '#c43e3e', '#0891b2']
-    };
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    return dark
+      ? { grid: '#1e2a38', text: '#8593a0', accent: '#38bdf8', accentSoft: 'rgba(56,189,248,.18)',
+          good: '#34d399', bad: '#f87171', palette: ['#38bdf8', '#34d399', '#fbbf24', '#a78bfa', '#f87171', '#22d3ee'] }
+      : { grid: '#e2e8f0', text: '#64748b', accent: '#0f6cbd', accentSoft: 'rgba(15,108,189,.15)',
+          good: '#107c41', bad: '#c43e3e', palette: ['#0f6cbd', '#107c41', '#9a6700', '#7c5cff', '#c43e3e', '#0891b2'] };
+  };
+
+  /* Theme toggle (light Fluent <-> dark terminal) */
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    var btn = document.getElementById('themeToggle');
+    if (btn) btn.querySelector('span').textContent = t === 'dark' ? 'Light' : 'Terminal';
+  }
+  CACC.toggleTheme = function () {
+    var next = CACC.store.getTheme() === 'dark' ? 'light' : 'dark';
+    CACC.store.setTheme(next); applyTheme(next); CACC.rerender();
+  };
+
+  /* ---------- Table tools: click-to-sort + CSV export ---------- */
+  function parseCell(text) {
+    var t = (text || '').replace(/[,$%\s]/g, '').replace(/^\((.*)\)$/, '-$1');
+    var n = parseFloat(t);
+    return (t !== '' && !isNaN(n)) ? n : (text || '').trim().toLowerCase();
+  }
+  function makeSortable(table) {
+    if (!table || !table.tHead) return;
+    var ths = table.tHead.rows[0].cells;
+    Array.prototype.forEach.call(ths, function (th, idx) {
+      th.classList.add('sortable');
+      th.addEventListener('click', function () {
+        var dir = th.getAttribute('aria-sort') === 'ascending' ? 'descending' : 'ascending';
+        Array.prototype.forEach.call(ths, function (h) { h.removeAttribute('aria-sort'); });
+        th.setAttribute('aria-sort', dir);
+        var tbody = table.tBodies[0], rows = Array.prototype.slice.call(tbody.rows);
+        var totals = rows.filter(function (r) { return r.classList.contains('total'); });
+        var body = rows.filter(function (r) { return !r.classList.contains('total'); });
+        body.sort(function (a, b) {
+          var av = parseCell(a.cells[idx] && a.cells[idx].textContent), bv = parseCell(b.cells[idx] && b.cells[idx].textContent);
+          if (av < bv) return dir === 'ascending' ? -1 : 1;
+          if (av > bv) return dir === 'ascending' ? 1 : -1;
+          return 0;
+        });
+        body.concat(totals).forEach(function (r) { tbody.appendChild(r); });
+      });
+    });
+  }
+  function tableToCSV(table) {
+    var lines = [];
+    function rowCsv(cells) {
+      return Array.prototype.map.call(cells, function (c) {
+        var t = (c.textContent || '').replace(/\s+/g, ' ').trim();
+        return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+      }).join(',');
+    }
+    if (table.tHead) Array.prototype.forEach.call(table.tHead.rows, function (r) { lines.push(rowCsv(r.cells)); });
+    if (table.tBodies[0]) Array.prototype.forEach.call(table.tBodies[0].rows, function (r) { lines.push(rowCsv(r.cells)); });
+    return lines.join('\r\n');
+  }
+  function downloadText(name, text, mime) {
+    var blob = new Blob([text], { type: (mime || 'text/csv') + ';charset=utf-8;' });
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+  function exportButton(getTable, filename) {
+    return el('button', { class: 'btn btn-ghost btn-sm', onclick: function () {
+      var tbl = typeof getTable === 'function' ? getTable() : getTable;
+      if (tbl) downloadText(filename, tableToCSV(tbl), 'text/csv');
+    } }, [icon('list'), 'Export CSV']);
+  }
+  CACC.tableTools = { makeSortable: makeSortable, toCSV: tableToCSV, download: downloadText, exportButton: exportButton };
+
+  /* Drill-down: open a variance cost-element breakdown modal (i = 0..3) */
+  function varianceDrill(i, v) {
+    var map = [
+      { name: 'Direct material', g: v.material, parts: [['Price', 'price'], ['Quantity', 'quantity']] },
+      { name: 'Direct labor', g: v.labor, parts: [['Rate', 'rate'], ['Efficiency', 'efficiency']] },
+      { name: 'Variable overhead', g: v.varOH, parts: [['Spending', 'spending'], ['Efficiency', 'efficiency']] },
+      { name: 'Fixed overhead', g: v.fixedOH, parts: [['Budget', 'budget'], ['Volume', 'volume']] }
+    ][i];
+    if (!map) return;
+    var tb = el('tbody');
+    map.parts.forEach(function (p) { tb.appendChild(el('tr', {}, [el('td', { text: p[0] }), ui.vcell(map.g[p[1]]), el('td', {}, [ui.badgeFor(map.g[p[1]])])])); });
+    tb.appendChild(el('tr', { class: 'total' }, [el('td', { text: 'Subtotal' }), ui.vcell(map.g.total), el('td', {}, [ui.badgeFor(map.g.total)])]));
+    ui.modal(map.name + ' variance', [
+      el('p', { class: 'muted', text: 'Decomposition of the ' + map.name.toLowerCase() + ' variance into its drivers (positive = unfavorable).' }),
+      el('table', { class: 'dt' }, [el('thead', {}, el('tr', {}, [el('th', { text: 'Component' }), el('th', { class: 'num', text: 'Variance' }), el('th', { text: 'Status' })])), tb])
+    ], 'Drill-down');
+  }
+  CACC.varianceDrill = varianceDrill;
+  /* onClick factory for Chart.js: maps a clicked element index -> callback(index) */
+  CACC.chartClick = function (cb) {
+    return function (evt, els) { if (els && els.length) cb(els[0].index, els[0].datasetIndex); };
   };
 
   /* ---------- Nav + router ---------- */
@@ -203,6 +293,8 @@
     { key: 'inventory', label: 'Inventory & Cost Flows', icon: 'inventory', section: 'Cost analysis' },
     { key: 'inventoryReserve', label: 'Inventory Reserve', icon: 'box', section: 'Cost analysis' },
     { key: 'cvp', label: 'CVP & Break-Even', icon: 'cvp', section: 'Cost analysis' },
+    { key: 'capacity', label: 'Capacity & Overhead', icon: 'gauge', section: 'Cost analysis' },
+    { key: 'profitability', label: 'Profitability', icon: 'margin', section: 'Cost analysis' },
     { key: 'itemMaster', label: 'Item Master', icon: 'list', section: 'Catalog' },
     { key: 'journal', label: 'Journal Entries', icon: 'ledger', section: 'Records' },
     { key: 'diagnostic', label: 'Day-1 Diagnostic', icon: 'diagnostic', section: 'Advisory' },
@@ -317,6 +409,7 @@
   function boot() {
     var d = CACC.store.data();
     document.getElementById('brandSub').textContent = d.company.name;
+    applyTheme(CACC.store.getTheme());
     buildSidebar();
     document.addEventListener('keydown', globalKeys);
     var start = (location.hash || '').replace('#', '');

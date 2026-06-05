@@ -39,10 +39,12 @@
       c.appendChild(el('div', { class: 'card', style: 'margin-top:18px' }, [
         el('div', { class: 'card-pad', style: 'display:flex;gap:12px;flex-wrap:wrap;align-items:end' }, [
           el('div', { class: 'field', style: 'flex:1;min-width:220px' }, [el('label', { text: 'Search' }), search]),
-          el('div', { class: 'field', style: 'min-width:180px' }, [el('label', { text: 'Category' }), catSel])
+          el('div', { class: 'field', style: 'min-width:180px' }, [el('label', { text: 'Category' }), catSel]),
+          el('div', { style: 'margin-left:auto' }, [CACC.tableTools.exportButton(table, 'item-master.csv')])
         ]),
         el('div', { style: 'overflow-x:auto' }, [table])
       ]));
+      CACC.tableTools.makeSortable(table);
 
       c.appendChild(el('div', { class: 'section-title', text: 'AI insights' }));
       c.appendChild(ui.aiPanel('itemMaster', M.ctx.itemMaster()));

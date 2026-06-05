@@ -137,6 +137,7 @@
         data: [Math.abs(v.material.total), Math.abs(v.labor.total), Math.abs(v.varOH.total), Math.abs(v.fixedOH.total)],
         backgroundColor: t.palette.slice(0, 4), borderWidth: 0 }] },
       options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
+        onClick: CACC.chartClick(function (i) { CACC.varianceDrill(i, v); }),
         plugins: { legend: { position: 'bottom', labels: { color: t.text } }, tooltip: { callbacks: { label: function (ctx) { return ctx.label + ': ' + CACC.fmt.money0(ctx.raw); } } } } }
     });
   }
@@ -155,6 +156,7 @@
     CACC.chart(canvas, {
       type: 'bar', data: { labels: labels, datasets: [{ data: floats, backgroundColor: colors, borderRadius: 4, barPercentage: 0.7 }] },
       options: { responsive: true, maintainAspectRatio: false,
+        onClick: CACC.chartClick(function (i) { if (i >= 1 && i <= 4) CACC.varianceDrill(i - 1, v); }),
         plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (ctx) { var a = ctx.raw; return CACC.fmt.money(Math.abs(a[1] - a[0])); } } } },
         scales: { x: { grid: { display: false }, ticks: { color: t.text } }, y: { grid: { color: t.grid }, ticks: { color: t.text, callback: function (val) { return '$' + (val / 1000) + 'k'; } } } } }
     });

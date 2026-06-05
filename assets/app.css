@@ -45,6 +45,24 @@
   --mono: "Cascadia Mono", "SF Mono", ui-monospace, "Segoe UI Mono", Consolas, monospace;
 }
 
+/* ---------- Dark "terminal" theme ---------- */
+:root[data-theme="dark"] {
+  --accent: #38bdf8; --accent-strong: #0ea5e9; --accent-weak: #0b2942; --accent-ghost: #0e1b27;
+  --n-0: #0f1620; --n-50: #121c27; --n-100: #16212e; --n-150: #1a2632; --n-200: #22303f;
+  --n-300: #2c3c4e; --n-400: #5b6b7a; --n-500: #7e8c9a; --n-600: #94a3b1; --n-700: #aebac7; --n-800: #cdd7e1; --n-900: #e6edf3;
+  --bg: #0a0e14; --surface: #0f1620; --text: #e6edf3; --text-dim: #aebac7; --text-muted: #8593a0;
+  --border: #1e2a38; --border-strong: #2c3c4e;
+  --good: #34d399; --good-bg: #0e2a22; --bad: #f87171; --bad-bg: #2c1517; --warn: #fbbf24; --warn-bg: #2a2110;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.5); --shadow-md: 0 4px 14px rgba(0,0,0,.55); --shadow-lg: 0 14px 36px rgba(0,0,0,.65);
+}
+:root[data-theme="dark"] .topbar { background: rgba(10, 14, 20, .82); }
+:root[data-theme="dark"] .ai-head { background: linear-gradient(90deg, var(--accent-weak), var(--surface)); }
+:root[data-theme="dark"] .brand-mark { box-shadow: 0 0 0 1px rgba(56,189,248,.4); }
+.score-ring text.ring-num { fill: var(--text); }
+.score-ring text.ring-sub { fill: var(--text-muted); }
+.score-ring circle.ring-track { stroke: var(--n-200); }
+body { font-feature-settings: "tnum" 0; }
+
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
@@ -144,6 +162,10 @@ table.dt th, table.dt td { text-align: left; padding: 10px 14px; border-bottom: 
 table.dt thead th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; color: var(--text-muted); font-weight: 600; background: var(--n-50); }
 table.dt td.num, table.dt th.num { text-align: right; font-variant-numeric: tabular-nums; }
 table.dt tbody tr:hover { background: var(--n-50); }
+table.dt thead th.sortable { cursor: pointer; user-select: none; }
+table.dt thead th.sortable:hover { color: var(--text); }
+table.dt thead th[aria-sort="ascending"]::after { content: " ▲"; font-size: 9px; color: var(--accent); }
+table.dt thead th[aria-sort="descending"]::after { content: " ▼"; font-size: 9px; color: var(--accent); }
 table.dt tr.total td { font-weight: 700; border-top: 2px solid var(--border-strong); background: var(--n-50); }
 table.dt tr.sub td { color: var(--text-dim); }
 

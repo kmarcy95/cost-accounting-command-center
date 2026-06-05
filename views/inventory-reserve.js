@@ -69,13 +69,16 @@
         el('td', { class: 'num tnum', text: fmt.money0(t.eoReserve) }),
         el('td', { class: 'num tnum', text: fmt.money0(t.combinedReserve) }), el('td', {})
       ]));
-      c.appendChild(ui.card(null, null, [el('table', { class: 'dt' }, [
+      var resTable = el('table', { class: 'dt' }, [
         el('thead', {}, el('tr', {}, [
           el('th', { text: 'SKU' }), el('th', { text: 'Description' }), el('th', { class: 'num', text: 'On hand' }),
           el('th', { class: 'num', text: 'Gross' }), el('th', { class: 'num', text: 'NRV resv' }), el('th', { class: 'num', text: 'E&O resv' }),
           el('th', { class: 'num', text: 'Total reserve' }), el('th', { text: 'Status' })
         ])), tb
-      ])]));
+      ]);
+      c.appendChild(ui.card('Reserve register', res.items.length + ' SKUs · click a row to drill down', [resTable],
+        CACC.tableTools.exportButton(resTable, 'inventory-reserve.csv')));
+      CACC.tableTools.makeSortable(resTable);
 
       c.appendChild(el('div', { class: 'section-title', text: 'AI insights' }));
       c.appendChild(ui.aiPanel('inventoryReserve', M.ctx.inventoryReserve()));

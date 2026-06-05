@@ -68,11 +68,11 @@
     var off = circ * (1 - score / 100);
     var wrap = el('div', { class: 'score-ring', style: 'width:130px;height:130px;flex:none' });
     wrap.innerHTML = '<svg width="130" height="130" viewBox="0 0 130 130">' +
-      '<circle cx="65" cy="65" r="52" fill="none" stroke="#e2e8f0" stroke-width="12"/>' +
+      '<circle class="ring-track" cx="65" cy="65" r="52" fill="none" stroke-width="12"/>' +
       '<circle cx="65" cy="65" r="52" fill="none" stroke="' + color + '" stroke-width="12" stroke-linecap="round" ' +
       'stroke-dasharray="' + circ.toFixed(1) + '" stroke-dashoffset="' + off.toFixed(1) + '" transform="rotate(-90 65 65)"/>' +
-      '<text x="65" y="62" text-anchor="middle" font-size="30" font-weight="700" fill="#1e293b">' + score + '</text>' +
-      '<text x="65" y="82" text-anchor="middle" font-size="12" fill="#64748b">/ 100</text></svg>';
+      '<text class="ring-num" x="65" y="62" text-anchor="middle" font-size="30" font-weight="700">' + score + '</text>' +
+      '<text class="ring-sub" x="65" y="82" text-anchor="middle" font-size="12">/ 100</text></svg>';
     return wrap;
   }
   function barColor(s) { return s >= 80 ? '#107c41' : s >= 60 ? '#9a6700' : '#c43e3e'; }

@@ -7,6 +7,8 @@
   var CACC = (root.CACC = root.CACC || {});
 
   function d() { return CACC.store.data(); }
+  function r2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
+  function r4(n) { return Math.round((n + Number.EPSILON) * 10000) / 10000; }
 
   var model = {
     variance: function () { return CACC.VarianceEngine.computeAll(d().standardCosting); },
@@ -35,6 +37,39 @@
     },
     journal: function () { return CACC.JournalEntriesEngine.build(d().standardCosting, model.reserve().totals.combinedReserve); },
     history: function () { return d().history || []; },
+
+    /* Capacity & overhead absorption analysis */
+    capacity: function () {
+      var sc = d().standardCosting, ops = d().operations, v = model.variance(), ab = model.absorption();
+      var util = ops.availableMachineHours ? ops.actualMachineHours / ops.availableMachineHours : 0;
+      var idleHours = Math.max(0, ops.availableMachineHours - ops.actualMachineHours);
+      var appliedOH = r2((sc.standardVarRate + sc.standardFixedRate) * sc.standardHours);
+      var actualOH = r2(sc.actualVOH + sc.actualFOH);
+      return {
+        availableHours: ops.availableMachineHours, actualHours: ops.actualMachineHours, idleHours: idleHours,
+        utilization: r4(util), fixedRate: sc.standardFixedRate, idleCapacityCost: r2(idleHours * sc.standardFixedRate),
+        appliedOH: appliedOH, actualOH: actualOH, overUnder: r2(actualOH - appliedOH),
+        varOhSpending: v.varOH.spending, varOhEfficiency: v.varOH.efficiency,
+        fixedOhBudget: v.fixedOH.budget, fixedOhVolume: v.fixedOH.volume, absorption: ab
+      };
+    },
+
+    /* Profitability by finished-goods product */
+    profitability: function () {
+      var fg = d().items.filter(function (it) { return it.type === 'fg'; });
+      var rows = fg.map(function (it) {
+        var unitMargin = r2(it.sellingPrice - (it.costToSell || 0) - it.unitCost);
+        return {
+          sku: it.sku, description: it.description, price: it.sellingPrice, unitCost: it.unitCost, costToSell: it.costToSell || 0,
+          unitMargin: unitMargin, marginPct: it.sellingPrice ? r4(unitMargin / it.sellingPrice) : 0,
+          annualDemand: it.annualDemand, annualRevenue: r2(it.sellingPrice * it.annualDemand), annualMargin: r2(unitMargin * it.annualDemand)
+        };
+      }).sort(function (a, b) { return b.annualMargin - a.annualMargin; });
+      var totals = rows.reduce(function (a, p) { a.annualRevenue += p.annualRevenue; a.annualMargin += p.annualMargin; return a; }, { annualRevenue: 0, annualMargin: 0 });
+      totals.annualRevenue = r2(totals.annualRevenue); totals.annualMargin = r2(totals.annualMargin);
+      totals.marginPct = totals.annualRevenue ? r4(totals.annualMargin / totals.annualRevenue) : 0;
+      return { products: rows, totals: totals };
+    },
 
     /* Cross-module alerts derived from the engines (drives dashboard alert panel) */
     alerts: function () {
@@ -136,6 +171,8 @@
           totalGross: r.totals.grossValue, totalNet: r.totals.netValue, reserve: r };
       },
       journal: function () { return { company: d().company, journal: model.journal() }; },
+      capacity: function () { return { company: d().company, capacity: model.capacity() }; },
+      profitability: function () { return { company: d().company, profitability: model.profitability() }; },
       trends: function () {
         var h = model.history();
         var first = h[0] || {}, last = h[h.length - 1] || {};

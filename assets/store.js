@@ -31,7 +31,9 @@
     getKey: function () { return LS.get(KEYS.apiKey, ''); },
     setKey: function (k) { k ? LS.set(KEYS.apiKey, k) : LS.remove(KEYS.apiKey); },
     getModel: function () { return LS.get(KEYS.model, 'claude-opus-4-8'); },
-    setModel: function (m) { LS.set(KEYS.model, m); }
+    setModel: function (m) { LS.set(KEYS.model, m); },
+    getTheme: function () { return LS.get('cacc.theme', 'light'); },
+    setTheme: function (t) { LS.set('cacc.theme', t); }
   };
 
   /* ---- formatting ---- */
