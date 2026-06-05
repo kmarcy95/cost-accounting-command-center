@@ -328,6 +328,17 @@
       });
     });
     SEED.workforce = wf;
+
+    // Sales orders — one per fact row (period x plant x product x customer)
+    var sos = [], sid = 9000;
+    facts.forEach(function (fct) {
+      var seed = 'so' + fct.period + fct.plantId + fct.sku + fct.customerId;
+      var pi = SEED.periods.indexOf(fct.period);
+      var status = pi === SEED.periods.length - 1 ? (rand(seed) > 0.5 ? 'Open' : 'Shipped') : 'Invoiced';
+      sos.push({ id: 'SO-' + (sid++), date: fct.period, plantId: fct.plantId, plantName: fct.plantName, customerId: fct.customerId, customer: fct.customerName,
+        sku: fct.sku, productName: fct.productName, qty: fct.units, price: r2(fct.revenue / (fct.units || 1)), amount: fct.revenue, margin: fct.grossProfit, status: status });
+    });
+    SEED.salesOrders = sos;
   })();
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = SEED; }

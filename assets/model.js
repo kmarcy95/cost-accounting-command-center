@@ -120,6 +120,19 @@
         return x;
       });
     },
+    /* ---- Sales orders ---- */
+    filteredSalesOrders: function () {
+      var f = CACC.store.getFilter();
+      return (d().salesOrders || []).filter(function (s) { return (f.plantId === 'ALL' || s.plantId === f.plantId) && (f.period === 'ALL' || s.date === f.period); });
+    },
+    salesTotals: function () {
+      var rows = model.filteredSalesOrders();
+      var amount = rows.reduce(function (s, o) { return s + o.amount; }, 0);
+      var open = rows.filter(function (o) { return o.status === 'Open'; });
+      return { amount: r2(amount), orders: rows.length, units: rows.reduce(function (s, o) { return s + o.qty; }, 0),
+        openCount: open.length, openValue: r2(open.reduce(function (s, o) { return s + o.amount; }, 0)), avgOrder: r2(rows.length ? amount / rows.length : 0) };
+    },
+
     /* ---- Procurement (Supply Chain) ---- */
     filteredPOs: function () {
       var f = CACC.store.getFilter();

@@ -36,7 +36,11 @@
     getModel: function () { return LS.get(KEYS.model, 'claude-opus-4-8'); },
     setModel: function (m) { LS.set(KEYS.model, m); },
     getTheme: function () { return LS.get('cacc.theme', 'dark'); },
-    setTheme: function (t) { LS.set('cacc.theme', t); }
+    setTheme: function (t) { LS.set('cacc.theme', t); },
+    // saved custom-report templates
+    getReports: function () { return LS.get('cacc.reports', []); },
+    saveReport: function (name, config) { var r = LS.get('cacc.reports', []).filter(function (x) { return x.name !== name; }); r.push({ name: name, config: config }); LS.set('cacc.reports', r); },
+    deleteReport: function (name) { LS.set('cacc.reports', LS.get('cacc.reports', []).filter(function (x) { return x.name !== name; })); }
   };
 
   /* ---- formatting ---- */

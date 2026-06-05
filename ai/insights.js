@@ -366,6 +366,19 @@
         ],
         bullets: w.rows.slice(0, 5).map(function (r) { return r.sku + ' @ ' + r.bin + ': ' + fmt.num(r.qty, 0) + ' u · ' + fmt.money0(r.value) + ' · ' + r.status; })
       };
+    },
+
+    salesOrders: function (c) {
+      var t = c.totals;
+      return {
+        headline: 'Sales orders',
+        paragraphs: [
+          'For ' + c.filter + ', ' + t.orders + ' sales orders total ' + fmt.money0(t.amount) + ' on ' + fmt.num(t.units, 0) +
+          ' units (avg order ' + fmt.money0(t.avgOrder) + '). ' + t.openCount + ' order(s) remain open — a ' + fmt.money0(t.openValue) + ' backlog.',
+          'Filter by customer or status to chase open orders, and drill any order to see the customer’s full book.'
+        ],
+        bullets: (c.orders || []).slice(0, 5).map(function (o) { return o.id + ' ' + o.customer + ' · ' + o.sku + ' · ' + fmt.money0(o.amount) + ' · ' + o.status; })
+      };
     }
   };
 

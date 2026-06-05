@@ -50,7 +50,7 @@
       c.appendChild(el('div', { class: 'section-title', text: 'Variance & inventory exposure' }));
       var rows = [['Direct material', v.material.total], ['Direct labor', v.labor.total], ['Variable overhead', v.varOH.total], ['Fixed overhead', v.fixedOH.total]];
       var tbody = el('tbody');
-      rows.forEach(function (r) { tbody.appendChild(el('tr', {}, [el('td', { text: r[0] }), ui.vcell(r[1]), el('td', {}, [ui.badgeFor(r[1])])])); });
+      rows.forEach(function (r, i) { tbody.appendChild(el('tr', { style: 'cursor:pointer', title: 'Open breakdown', onclick: function () { CACC.varianceDrill(i, v); } }, [el('td', { text: r[0] }), ui.vcell(r[1]), el('td', {}, [ui.badgeFor(r[1])])])); });
       tbody.appendChild(el('tr', { class: 'total' }, [el('td', { text: 'Total' }), ui.vcell(v.totals.totalVariance), el('td', {}, [ui.badgeFor(v.totals.totalVariance)])]));
       var varTable = ui.card('Variance by cost element', d.standardCosting.productName, [
         el('table', { class: 'dt' }, [el('thead', {}, el('tr', {}, [el('th', { text: 'Cost element' }), el('th', { class: 'num', text: 'Variance' }), el('th', { text: 'Status' })])), tbody])

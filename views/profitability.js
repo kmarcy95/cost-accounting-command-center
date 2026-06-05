@@ -21,7 +21,12 @@
       // Table (sortable + export)
       var tb = el('tbody');
       p.products.forEach(function (x) {
-        tb.appendChild(el('tr', {}, [
+        tb.appendChild(el('tr', { style: 'cursor:pointer', onclick: function () {
+          ui.window(x.sku + ' — ' + x.description, [el('div', { class: 'grid g4' }, [
+            ui.kpi('Unit margin', fmt.money(x.unitMargin), fmt.pct(x.marginPct * 100), 'margin', x.unitMargin < 0 ? 'unfav' : 'fav'),
+            ui.kpi('Price', fmt.money(x.price), null, 'dollar'), ui.kpi('Unit cost', fmt.money(x.unitCost), null, 'box'),
+            ui.kpi('Annual margin', fmt.money0(x.annualMargin), fmt.num(x.annualDemand, 0) + ' units/yr', 'variance')
+          ])], 'Product profitability'); } }, [
           el('td', {}, [el('strong', { text: x.sku })]), el('td', { text: x.description }),
           el('td', { class: 'num tnum', text: fmt.money(x.price) }), el('td', { class: 'num tnum', text: fmt.money(x.unitCost) }),
           el('td', { class: 'num tnum ' + (x.unitMargin < 0 ? 'unfav' : 'fav') }, fmt.money(x.unitMargin)),
