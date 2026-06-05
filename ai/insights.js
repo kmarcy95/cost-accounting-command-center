@@ -194,6 +194,27 @@
         ],
         bullets: j.entries.map(function (e) { return e.ref + ' — ' + e.memo + ': ' + fmt.money0(e.debit); })
       };
+    },
+
+    trends: function (c) {
+      var h = c.history, last = h[h.length - 1] || {}, first = h[0] || {};
+      return {
+        headline: 'Six-month cost trend',
+        paragraphs: [
+          'Over the trailing six periods, the unfavorable total variance has ' + (c.varianceDelta < 0 ? 'improved' : 'worsened') +
+          ' from ' + fmt.money0(first.totalVariance) + ' to ' + fmt.money0(last.totalVariance) + ', while gross margin moved from ' +
+          fmt.pct(first.grossMarginPct * 100) + ' to ' + fmt.pct(last.grossMarginPct * 100) + ' — a ' + (c.marginDelta >= 0 ? '+' : '') +
+          fmt.pct(c.marginDelta * 100) + ' shift.',
+          'Inventory reserve as a share of gross fell from ' + fmt.pct(first.reservePct * 100) + ' to ' + fmt.pct(last.reservePct * 100) +
+          ', and capacity utilization climbed to ' + fmt.pct(last.capacityPct * 100) + '. The trend is consistent with tightening cost control; sustain it by holding standards current and clearing slow-moving stock.'
+        ],
+        bullets: [
+          'Variance: ' + fmt.money0(first.totalVariance) + ' → ' + fmt.money0(last.totalVariance) + ' (' + (c.varianceDelta < 0 ? 'favorable' : 'adverse') + ' ' + fmt.money0(Math.abs(c.varianceDelta)) + ').',
+          'Gross margin: ' + fmt.pct(first.grossMarginPct * 100) + ' → ' + fmt.pct(last.grossMarginPct * 100) + '.',
+          'Reserve ratio: ' + fmt.pct(first.reservePct * 100) + ' → ' + fmt.pct(last.reservePct * 100) + '.',
+          'Capacity: ' + fmt.pct(first.capacityPct * 100) + ' → ' + fmt.pct(last.capacityPct * 100) + '.'
+        ]
+      };
     }
   };
 

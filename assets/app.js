@@ -197,6 +197,7 @@
   /* ---------- Nav + router ---------- */
   var NAV = [
     { key: 'dashboard', label: 'Dashboard', icon: 'dashboard', section: 'Overview' },
+    { key: 'trends', label: 'Trends & Analytics', icon: 'cvp', section: 'Overview' },
     { key: 'standardCosting', label: 'Standard Costing', icon: 'variance', section: 'Cost analysis' },
     { key: 'productCosting', label: 'Product Costing', icon: 'product', section: 'Cost analysis' },
     { key: 'inventory', label: 'Inventory & Cost Flows', icon: 'inventory', section: 'Cost analysis' },

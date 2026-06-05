@@ -137,7 +137,17 @@
     operations: {
       availableMachineHours: 2400,
       actualMachineHours: 2100
-    }
+    },
+
+    /* ---- 6-month history for trend/time-series analytics ---- */
+    history: [
+      { period: 'Jan', totalVariance: 6120, grossMarginPct: 0.291, inventoryNet: 705000, reservePct: 0.224, capacityPct: 0.78, cogs: 271000, unitsSold: 7400 },
+      { period: 'Feb', totalVariance: 5780, grossMarginPct: 0.298, inventoryNet: 712000, reservePct: 0.216, capacityPct: 0.80, cogs: 266000, unitsSold: 7550 },
+      { period: 'Mar', totalVariance: 5230, grossMarginPct: 0.305, inventoryNet: 718500, reservePct: 0.209, capacityPct: 0.82, cogs: 262000, unitsSold: 7680 },
+      { period: 'Apr', totalVariance: 5010, grossMarginPct: 0.311, inventoryNet: 720000, reservePct: 0.205, capacityPct: 0.84, cogs: 259000, unitsSold: 7820 },
+      { period: 'May', totalVariance: 4760, grossMarginPct: 0.316, inventoryNet: 722500, reservePct: 0.201, capacityPct: 0.86, cogs: 257000, unitsSold: 7910 },
+      { period: 'Jun', totalVariance: 4490, grossMarginPct: 0.320, inventoryNet: 724800, reservePct: 0.197, capacityPct: 0.875, cogs: 255000, unitsSold: 8000 }
+    ]
   };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = SEED; }

@@ -34,6 +34,36 @@
       return { lines: lines, total: total };
     },
     journal: function () { return CACC.JournalEntriesEngine.build(d().standardCosting, model.reserve().totals.combinedReserve); },
+    history: function () { return d().history || []; },
+
+    /* Cross-module alerts derived from the engines (drives dashboard alert panel) */
+    alerts: function () {
+      var out = [];
+      var v = model.variance(), res = model.reserve(), cvp = model.cvpSingle(), ab = model.absorption(), dg = model.diagnostic();
+      var ops = d().operations;
+      var varPct = v.totals.standardCost ? Math.abs(v.totals.totalVariance) / v.totals.standardCost : 0;
+      if (v.totals.totalVariance > 0 && varPct > 0.03)
+        out.push({ level: varPct > 0.06 ? 'High' : 'Medium', area: 'Standard Costing', key: 'standardCosting',
+          text: 'Unfavorable total variance of ' + CACC.fmt.money0(v.totals.totalVariance) + ' (' + CACC.fmt.pct(varPct * 100) + ' of standard).' });
+      if (res.totals.reservePct > 0.15)
+        out.push({ level: res.totals.reservePct > 0.20 ? 'High' : 'Medium', area: 'Inventory Reserve', key: 'inventoryReserve',
+          text: CACC.fmt.money0(res.totals.combinedReserve) + ' reserve on ' + res.totals.itemsReserved + ' SKUs (' + CACC.fmt.pct(res.totals.reservePct * 100) + ' of gross).' });
+      if (cvp.marginOfSafety.ratio < 0.25)
+        out.push({ level: cvp.marginOfSafety.ratio < 0.1 ? 'High' : 'Medium', area: 'CVP', key: 'cvp',
+          text: 'Margin of safety is only ' + CACC.fmt.pct(cvp.marginOfSafety.ratio * 100) + ' above break-even.' });
+      if (Math.abs(ab.variance) / (ab.applied || 1) > 0.05)
+        out.push({ level: 'Medium', area: 'Overhead', key: 'inventory',
+          text: 'Overhead ' + ab.label + ' by ' + CACC.fmt.money0(Math.abs(ab.variance)) + ' (' + CACC.fmt.pct(Math.abs(ab.variance) / ab.applied * 100) + ').' });
+      var cap = ops.availableMachineHours ? ops.actualMachineHours / ops.availableMachineHours : 0;
+      if (cap < 0.85)
+        out.push({ level: 'Info', area: 'Capacity', key: 'productCosting', text: 'Capacity utilization at ' + CACC.fmt.pct(cap * 100) + ' — idle capacity absorbs fixed overhead.' });
+      var weak = dg.dimensions.slice().sort(function (a, b) { return a.score - b.score; })[0];
+      if (weak && weak.score < 70)
+        out.push({ level: weak.score < 50 ? 'High' : 'Medium', area: 'Diagnostic', key: 'diagnostic', text: weak.label + ' scores ' + weak.score + '/100 — see Day-1 Diagnostic.' });
+      var order = { High: 0, Medium: 1, Info: 2 };
+      out.sort(function (a, b) { return order[a.level] - order[b.level]; });
+      return out;
+    },
 
     cvpSingle: function () { return CACC.CvpEngine.singleProduct(d().cvp.single); },
     cvpMulti: function () {
@@ -105,7 +135,17 @@
         return { company: d().company, itemCount: d().items.length,
           totalGross: r.totals.grossValue, totalNet: r.totals.netValue, reserve: r };
       },
-      journal: function () { return { company: d().company, journal: model.journal() }; }
+      journal: function () { return { company: d().company, journal: model.journal() }; },
+      trends: function () {
+        var h = model.history();
+        var first = h[0] || {}, last = h[h.length - 1] || {};
+        return {
+          company: d().company, history: h,
+          varianceDelta: (last.totalVariance || 0) - (first.totalVariance || 0),
+          marginDelta: (last.grossMarginPct || 0) - (first.grossMarginPct || 0),
+          reserveDelta: (last.reservePct || 0) - (first.reservePct || 0)
+        };
+      }
     }
   };
 
