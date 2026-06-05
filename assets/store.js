@@ -75,7 +75,18 @@
   }
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 
+  /* debounce: defer fn until `wait` ms after the last call (for live-edit AI panels) */
+  function debounce(fn, wait) {
+    var t;
+    return function () {
+      var ctx = this, args = arguments;
+      clearTimeout(t);
+      t = setTimeout(function () { fn.apply(ctx, args); }, wait == null ? 500 : wait);
+    };
+  }
+
   CACC.LS = LS;
+  CACC.util = { debounce: debounce };
   CACC.store = store;
   CACC.fmt = fmt;
   CACC.dom = { el: el, clear: clear };

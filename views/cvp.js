@@ -55,6 +55,11 @@
       c.appendChild(el('div', { class: 'section-title', text: 'AI insights' }));
       c.appendChild(aiReg);
 
+      var refreshAi = CACC.util.debounce(function () {
+        clear(aiReg);
+        aiReg.appendChild(ui.aiPanel('cvp', M.ctx.cvp()));
+      }, 600);
+
       function recompute() {
         var r = M.cvpSingle();
         clear(kpiReg);
@@ -74,8 +79,7 @@
         if (localChart) { try { localChart.destroy(); } catch (e) {} }
         localChart = drawBreakEven(document.getElementById('cvpChart'), s, r);
 
-        clear(aiReg);
-        aiReg.appendChild(ui.aiPanel('cvp', M.ctx.cvp()));
+        refreshAi();
       }
       recompute();
     }

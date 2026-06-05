@@ -47,9 +47,14 @@
       c.appendChild(el('div', { class: 'section-title', text: 'AI insights' }));
       c.appendChild(aiRegion);
 
+      var refreshAi = CACC.util.debounce(function () {
+        clear(aiRegion);
+        aiRegion.appendChild(ui.aiPanel('standardCosting', M.ctx.standardCosting()));
+      }, 600);
+
       function recompute() {
         var v = M.variance();
-        clear(resultsRegion); clear(aiRegion);
+        clear(resultsRegion);
 
         // KPI strip
         resultsRegion.appendChild(el('div', { class: 'grid g3' }, [
@@ -86,7 +91,7 @@
         if (localChart) { try { localChart.destroy(); } catch (e) {} }
         localChart = drawWaterfall(document.getElementById('scWaterfall'), v);
 
-        aiRegion.appendChild(ui.aiPanel('standardCosting', M.ctx.standardCosting()));
+        refreshAi();
       }
 
       function addGroup(tb, name, comps, total) {
