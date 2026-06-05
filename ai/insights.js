@@ -405,6 +405,80 @@
         ],
         bullets: p.stages.map(function (s) { return s.stage + ': ' + s.count + ' deals · ' + fmt.money0(s.amount); })
       };
+    },
+
+    workOrders: function (c) {
+      var t = c.wo.totals;
+      return {
+        headline: 'Work orders & WIP',
+        paragraphs: [
+          'For ' + c.filter + ', open WIP stands at ' + fmt.money0(t.wipBalance) + ' across ' + t.open + ' open order(s). Cost of goods manufactured (at standard) is ' +
+          fmt.money0(t.stdCogm) + ' against ' + fmt.money0(t.wipIssued) + ' issued to production.',
+          'Net production variance is ' + fmt.money0(Math.abs(t.total)) + ' ' + (t.total > 0 ? 'unfavorable' : 'favorable') +
+          ' (material ' + fmt.money0(t.material) + ', labor ' + fmt.money0(t.labor) + ', overhead ' + fmt.money0(t.overhead) + '). Settle closed orders and reconcile WIP to the GL at close.'
+        ],
+        bullets: c.wo.rows.slice(0, 5).map(function (r) { return r.id + ' (' + r.productSku + '): WIP ' + fmt.money0(r.wipBalance) + ' · var ' + fmt.money0(r.variances.total) + ' · ' + fmt.pct(r.percentComplete * 100) + ' done'; })
+      };
+    },
+    costOfQuality: function (c) {
+      var q = c.q, worst = q.categories.slice().sort(function (a, b) { return b.amount - a.amount; })[0];
+      return {
+        headline: 'Cost of quality',
+        paragraphs: [
+          'For ' + c.filter + ', total cost of quality is ' + fmt.money0(q.total) + ' — ' + fmt.money0(q.conformance) + ' conformance (prevention + appraisal) vs ' +
+          fmt.money0(q.failure) + ' failure (internal + external). ' + (worst ? worst.category + ' is the largest bucket at ' + fmt.money0(worst.amount) + '.' : ''),
+          'Shifting spend toward prevention typically lowers total quality cost; high external-failure cost signals escaping defects and warranty exposure.'
+        ],
+        bullets: q.categories.map(function (x) { return x.category + ': ' + fmt.money0(x.amount) + ' (' + x.count + ' events)'; })
+      };
+    },
+    bomRollup: function (c) {
+      var r = c.rollup, s = r.split;
+      return {
+        headline: 'Cost rollup — ' + r.name,
+        paragraphs: [
+          'The multilevel standard cost of ' + r.name + ' rolls up to ' + fmt.money(r.total) + ' per unit: material ' + fmt.money(s.material) +
+          ', labor ' + fmt.money(s.labor) + ', overhead ' + fmt.money(s.overhead) + (s.subcontract ? ', subcontract ' + fmt.money(s.subcontract) : '') + '.',
+          'Material is ' + fmt.pct(r.total ? s.material / r.total * 100 : 0) + ' of cost — the rollup is most sensitive to component prices and BOM quantities. Re-roll after any engineering or sourcing change.'
+        ],
+        bullets: r.lines.map(function (l) { return l.qty + '× ' + (l.name || l.sku) + ' @ ' + fmt.money(l.unitCost) + ' = ' + fmt.money(l.extended); })
+      };
+    },
+    accountsPayable: function (c) {
+      var ap = c.ap, top = ap.bySupplier[0];
+      return {
+        headline: 'Accounts payable',
+        paragraphs: [
+          'For ' + c.filter + ', open payables total ' + fmt.money0(ap.total) + ' across ' + ap.openCount + ' orders. Aging: current ' + fmt.money0(ap.aging.current) +
+          ', 31–60 ' + fmt.money0(ap.aging.b30) + ', 61–90 ' + fmt.money0(ap.aging.b60) + ', 90+ ' + fmt.money0(ap.aging.b90) + '. ' + (top ? top.supplier + ' is the largest balance.' : ''),
+          'Prioritize discounts and aging risk; tie three-way match (PO, receipt, invoice) before release.'
+        ],
+        bullets: ap.bySupplier.slice(0, 5).map(function (s) { return s.supplier + ': ' + fmt.money0(s.amount) + ' (' + s.count + ' orders)'; })
+      };
+    },
+    accountsReceivable: function (c) {
+      var ar = c.ar, top = ar.byCustomer[0];
+      return {
+        headline: 'Accounts receivable',
+        paragraphs: [
+          'For ' + c.filter + ', receivables total ' + fmt.money0(ar.total) + ' across ' + ar.openCount + ' orders. Aging: current ' + fmt.money0(ar.aging.current) +
+          ', 31–60 ' + fmt.money0(ar.aging.b30) + ', 61–90 ' + fmt.money0(ar.aging.b60) + ', 90+ ' + fmt.money0(ar.aging.b90) + '. ' + (top ? top.customer + ' is the largest balance.' : ''),
+          'Chase 60+ day balances; concentration in a few customers raises collection risk.'
+        ],
+        bullets: ar.byCustomer.slice(0, 5).map(function (x) { return x.customer + ': ' + fmt.money0(x.amount) + ' (' + x.count + ' orders)'; })
+      };
+    },
+    fixedAssets: function (c) {
+      var fa = c.fa, t = fa.totals;
+      return {
+        headline: 'Fixed assets',
+        paragraphs: [
+          'The asset base is ' + fmt.money0(t.cost) + ' at cost with ' + fmt.money0(t.accumDep) + ' accumulated depreciation — net book value ' + fmt.money0(t.nbv) +
+          '. Annual depreciation of ' + fmt.money0(t.annualDep) + ' feeds manufacturing overhead (IAS 2 fixed production overhead).',
+          'Depreciation economics flow into overhead rates rather than per-transaction asset postings; keep rates current as the asset base changes.'
+        ],
+        bullets: fa.rows.slice(0, 5).map(function (a) { return a.name + ': NBV ' + fmt.money0(a.nbv) + ' · dep ' + fmt.money0(a.annualDep) + '/yr'; })
+      };
     }
   };
 

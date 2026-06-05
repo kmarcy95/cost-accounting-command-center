@@ -266,6 +266,73 @@
         low: rows.filter(function (r) { return r.status !== 'In stock'; }).length };
     },
 
+    /* ---- Manufacturing cost engine (BOM rollup, work orders/WIP, landed cost) ---- */
+    bomRollupOf: function (sku) { return CACC.CostRollupEngine.rollup(sku, d().bomNodes || {}); },
+    bomExplodeOf: function (sku) { return CACC.CostRollupEngine.explode(sku, d().bomNodes || {}); },
+    workOrders: function () {
+      var f = CACC.store.getFilter();
+      var orders = (d().workOrders || []).filter(function (o) { return f.plantId === 'ALL' || o.plantId === f.plantId; });
+      return CACC.WorkOrderEngine.summary(orders);
+    },
+    costVersions: function () { return d().costVersions || []; },
+    qualityByCategory: function () {
+      var f = CACC.store.getFilter();
+      var rows = (d().qualityEvents || []).filter(function (q) { return (f.plantId === 'ALL' || q.plantId === f.plantId) && (f.period === 'ALL' || q.date === f.period); });
+      var cats = ['Prevention', 'Appraisal', 'Internal failure', 'External failure'], map = {};
+      cats.forEach(function (c) { map[c] = { category: c, amount: 0, count: 0 }; });
+      rows.forEach(function (q) { if (map[q.category]) { map[q.category].amount = r2(map[q.category].amount + q.amount); map[q.category].count++; } });
+      var total = r2(rows.reduce(function (s, q) { return s + q.amount; }, 0));
+      return { categories: cats.map(function (c) { return map[c]; }), events: rows, total: total, conformance: r2((map['Prevention'].amount + map['Appraisal'].amount)), failure: r2(map['Internal failure'].amount + map['External failure'].amount) };
+    },
+    landedShipments: function () {
+      return (d().landedShipments || []).map(function (s) { return { id: s.id, vessel: s.vessel, origin: s.origin, charges: s.charges, result: CACC.LandedCostEngine.applyCharges(s.charges, s.receipts) }; });
+    },
+    lots: function () { return d().lots || []; },
+    lotGenealogy: function (lot) {
+      var all = d().lots || [], byLot = {}; all.forEach(function (l) { byLot[l.lot] = l; });
+      function anc(l, acc) { ((byLot[l] && byLot[l].parents) || []).forEach(function (p) { if (acc.indexOf(p) < 0) { acc.push(p); anc(p, acc); } }); return acc; }
+      function desc(l, acc) { all.forEach(function (x) { if ((x.parents || []).indexOf(l) >= 0 && acc.indexOf(x.lot) < 0) { acc.push(x.lot); desc(x.lot, acc); } }); return acc; }
+      return { lot: byLot[lot], ancestors: anc(lot, []).map(function (x) { return byLot[x]; }), descendants: desc(lot, []).map(function (x) { return byLot[x]; }) };
+    },
+    subcontract: function () { return d().subcontractOrders || []; },
+
+    /* ---- D365 Finance ledgers ---- */
+    accountsPayable: function () {
+      var rows = model.filteredPOs().filter(function (p) { return p.status !== 'Closed'; });
+      var bySup = {}; rows.forEach(function (p) { if (!bySup[p.supplier]) bySup[p.supplier] = { supplier: p.supplier, amount: 0, count: 0 }; bySup[p.supplier].amount = r2(bySup[p.supplier].amount + p.amount); bySup[p.supplier].count++; });
+      var periods = d().periods || [], cur = periods.length - 1;
+      var aging = { current: 0, b30: 0, b60: 0, b90: 0 };
+      rows.forEach(function (p) { var age = cur - periods.indexOf(p.date); var b = age <= 0 ? 'current' : age === 1 ? 'b30' : age === 2 ? 'b60' : 'b90'; aging[b] = r2(aging[b] + p.amount); });
+      return { rows: rows, total: r2(rows.reduce(function (s, p) { return s + p.amount; }, 0)), bySupplier: Object.keys(bySup).map(function (k) { return bySup[k]; }).sort(function (a, b) { return b.amount - a.amount; }), aging: aging, openCount: rows.length };
+    },
+    accountsReceivable: function () {
+      var rows = model.filteredSalesOrders().filter(function (o) { return o.status !== 'Invoiced' ? true : true; }); // all are receivable until paid (demo)
+      var byCust = {}; rows.forEach(function (o) { if (!byCust[o.customer]) byCust[o.customer] = { customer: o.customer, amount: 0, count: 0 }; byCust[o.customer].amount = r2(byCust[o.customer].amount + o.amount); byCust[o.customer].count++; });
+      var periods = d().periods || [], cur = periods.length - 1;
+      var aging = { current: 0, b30: 0, b60: 0, b90: 0 };
+      rows.forEach(function (o) { var age = cur - periods.indexOf(o.date); var b = age <= 0 ? 'current' : age === 1 ? 'b30' : age === 2 ? 'b60' : 'b90'; aging[b] = r2(aging[b] + o.amount); });
+      return { rows: rows, total: r2(rows.reduce(function (s, o) { return s + o.amount; }, 0)), byCustomer: Object.keys(byCust).map(function (k) { return byCust[k]; }).sort(function (a, b) { return b.amount - a.amount; }), aging: aging, openCount: rows.length };
+    },
+    trialBalance: function () {
+      var rows = model.filteredLedger(), map = {};
+      rows.forEach(function (e) { if (!map[e.account]) map[e.account] = { account: e.account, debit: 0, credit: 0 }; map[e.account].debit = r2(map[e.account].debit + e.debit); map[e.account].credit = r2(map[e.account].credit + e.credit); });
+      var accts = Object.keys(map).map(function (k) { var a = map[k]; a.net = r2(a.debit - a.credit); return a; }).sort(function (a, b) { return Math.abs(b.net) - Math.abs(a.net); });
+      var dr = r2(accts.reduce(function (s, a) { return s + a.debit; }, 0)), cr = r2(accts.reduce(function (s, a) { return s + a.credit; }, 0));
+      return { accounts: accts, debits: dr, credits: cr, balanced: Math.abs(dr - cr) < 0.5 };
+    },
+    fixedAssets: function () {
+      var f = CACC.store.getFilter();
+      var rows = (d().fixedAssets || []).filter(function (a) { return f.plantId === 'ALL' || a.plantId === f.plantId; });
+      var t = rows.reduce(function (a, r) { a.cost += r.cost; a.accumDep += r.accumDep; a.nbv += (r.cost - r.accumDep); a.annualDep += r.annualDep; return a; }, { cost: 0, accumDep: 0, nbv: 0, annualDep: 0 });
+      Object.keys(t).forEach(function (k) { t[k] = r2(t[k]); });
+      return { rows: rows.map(function (r) { return Object.assign({ nbv: r2(r.cost - r.accumDep) }, r); }), totals: t, count: rows.length };
+    },
+    bankAccounts: function () {
+      var f = CACC.store.getFilter();
+      var rows = (d().bankAccounts || []).filter(function (b) { return f.plantId === 'ALL' || b.plantId === f.plantId; });
+      return { rows: rows, total: r2(rows.reduce(function (s, b) { return s + b.balance; }, 0)) };
+    },
+
     filterLabel: function () {
       var f = CACC.store.getFilter();
       var p = (d().plants || []).filter(function (x) { return x.id === f.plantId; })[0];
@@ -386,6 +453,12 @@
       warehouse: function () { return { group: d().group, filter: model.filterLabel(), warehouse: model.warehouse() }; },
       resourceScheduling: function () { return { group: d().group, filter: model.filterLabel(), totals: model.resourceTotals(), board: model.scheduleBoard() }; },
       quotes: function () { return { group: d().group, filter: model.filterLabel(), pipeline: model.pipeline() }; },
+      workOrders: function () { return { group: d().group, filter: model.filterLabel(), wo: model.workOrders() }; },
+      costOfQuality: function () { return { group: d().group, filter: model.filterLabel(), q: model.qualityByCategory() }; },
+      bomRollup: function () { var sku = (d().bomRoots || ['GX-200'])[0]; return { group: d().group, sku: sku, rollup: model.bomRollupOf(sku) }; },
+      accountsPayable: function () { return { group: d().group, filter: model.filterLabel(), ap: model.accountsPayable() }; },
+      accountsReceivable: function () { return { group: d().group, filter: model.filterLabel(), ar: model.accountsReceivable() }; },
+      fixedAssets: function () { return { group: d().group, fa: model.fixedAssets() }; },
       profitabilityCube: function () {
         return { group: d().group, filter: model.filterLabel(), kpis: model.execKpis(), topCustomers: model.topCustomers(5),
           byProduct: CACC.CubeEngine.groupBy(model.filtered(), 'sku', 'productName').sort(function (a, b) { return b.grossProfit - a.grossProfit; }) };

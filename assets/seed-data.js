@@ -394,6 +394,125 @@
     }
   })();
 
+  /* ===================================================================
+   * Manufacturing cost engine + governance master data (per the ERP feature doc)
+   * =================================================================== */
+  // Multilevel BOM / routing (cost component split)
+  SEED.bomNodes = {
+    'RM-CAST': { sku: 'RM-CAST', name: 'Cast steel blank', type: 'buy', purchaseCost: 30 },
+    'SA-HOUSING': { sku: 'SA-HOUSING', name: 'Machined housing (sub-assembly)', type: 'make', labor: 12, overhead: 8, components: [{ sku: 'RM-CAST', qty: 1 }] },
+    'RM-BUSH': { sku: 'RM-BUSH', name: 'Bronze bushing', type: 'buy', purchaseCost: 3.5 },
+    'RM-CTRL': { sku: 'RM-CTRL', name: 'Electronic controller', type: 'buy', purchaseCost: 88 },
+    'GX-200': { sku: 'GX-200', name: 'GX-200 Gearbox', type: 'make', labor: 30, overhead: 20, components: [{ sku: 'SA-HOUSING', qty: 1 }, { sku: 'RM-BUSH', qty: 4 }, { sku: 'RM-CTRL', qty: 1 }] },
+    'GX-450': { sku: 'GX-450', name: 'GX-450 Heavy-Duty Gearbox', type: 'make', labor: 55, overhead: 38, subcontract: 20, components: [{ sku: 'SA-HOUSING', qty: 2 }, { sku: 'RM-BUSH', qty: 8 }, { sku: 'RM-CTRL', qty: 2 }] }
+  };
+  SEED.bomRoots = ['GX-200', 'GX-450'];
+
+  // Work orders (production-order WIP + variances)
+  SEED.workOrders = [
+    { id: 'WO-1001', productSku: 'GX-200', plantId: 'SA', orderedQty: 100, completedQty: 100, status: 'Closed', stdUnit: { material: 132, labor: 42, overhead: 28 }, actual: { material: 13800, labor: 4400, overhead: 2900 } },
+    { id: 'WO-1002', productSku: 'GX-200', plantId: 'RF', orderedQty: 120, completedQty: 48, status: 'In process', stdUnit: { material: 132, labor: 42, overhead: 28 }, actual: { material: 7100, labor: 2150, overhead: 1500 } },
+    { id: 'WO-1003', productSku: 'GX-450', plantId: 'SA', orderedQty: 60, completedQty: 60, status: 'Closed', setupCost: 1200, plannedLot: 60, stdUnit: { material: 264, labor: 79, overhead: 74 }, actual: { material: 16500, labor: 5100, overhead: 4600 } },
+    { id: 'WO-1004', productSku: 'GX-450', plantId: 'MTY', orderedQty: 40, completedQty: 22, status: 'In process', stdUnit: { material: 264, labor: 79, overhead: 74 }, actual: { material: 6200, labor: 1900, overhead: 1750 } },
+    { id: 'WO-1005', productSku: 'GX-200', plantId: 'OKC', orderedQty: 80, completedQty: 80, status: 'Closed', stdUnit: { material: 132, labor: 42, overhead: 28 }, actual: { material: 10400, labor: 3500, overhead: 2300 } },
+    { id: 'WO-1006', productSku: 'GX-450', plantId: 'RF', orderedQty: 50, completedQty: 0, status: 'Released', stdUnit: { material: 264, labor: 79, overhead: 74 }, actual: { material: 0, labor: 0, overhead: 0 } }
+  ];
+
+  // Standard cost versions + release (maker-checker)
+  SEED.costVersions = [
+    { id: 'CV-2025-FY', name: 'FY2025 Standard', status: 'Active', effectiveFrom: 'Jan 2025', preparedBy: 'A. Cole (Cost Accountant)', approvedBy: 'M. Reyes (Plant Controller)', items: [{ sku: 'GX-200', cost: 202 }, { sku: 'GX-450', cost: 417 }, { sku: 'SA-HOUSING', cost: 50 }] },
+    { id: 'CV-2025-H2', name: 'H2 Mid-year refresh', status: 'Pending', effectiveFrom: 'Jul 2025', preparedBy: 'A. Cole (Cost Accountant)', approvedBy: null, items: [{ sku: 'GX-200', cost: 208 }, { sku: 'GX-450', cost: 431 }, { sku: 'SA-HOUSING', cost: 52 }] }
+  ];
+
+  // Cost of quality (prevention / appraisal / internal failure / external failure)
+  SEED.qualityEvents = [
+    { id: 'NCR-3001', date: 'May 2025', plantId: 'SA', type: 'Nonconformance', category: 'Internal failure', sku: 'GX-200', amount: 4200, status: 'Closed' },
+    { id: 'CAPA-2105', date: 'May 2025', plantId: 'RF', type: 'CAPA', category: 'Prevention', sku: '—', amount: 1800, status: 'Open' },
+    { id: 'INSP-7740', date: 'May 2025', plantId: 'MTY', type: 'Inspection', category: 'Appraisal', sku: 'GX-450', amount: 2600, status: 'Closed' },
+    { id: 'WRR-4410', date: 'May 2025', plantId: 'SA', type: 'Warranty return', category: 'External failure', sku: 'GX-450', amount: 9300, status: 'Open' },
+    { id: 'NCR-3002', date: 'Apr 2025', plantId: 'OKC', type: 'Nonconformance', category: 'Internal failure', sku: 'GX-200', amount: 1500, status: 'Closed' },
+    { id: 'SUP-2201', date: 'Apr 2025', plantId: 'RF', type: 'Supplier chargeback', category: 'External failure', sku: 'RM-CTRL', amount: 3100, status: 'Closed' },
+    { id: 'TRN-9100', date: 'Apr 2025', plantId: 'SA', type: 'Operator training', category: 'Prevention', sku: '—', amount: 2200, status: 'Closed' },
+    { id: 'INSP-7741', date: 'May 2025', plantId: 'RF', type: 'Final inspection', category: 'Appraisal', sku: 'GX-200', amount: 1900, status: 'Closed' }
+  ];
+
+  // Landed cost shipments
+  SEED.landedShipments = [
+    { id: 'SHP-501', vessel: 'MV Borderland', origin: 'Monterrey → San Antonio', charges: [{ type: 'Freight', amount: 4200, basis: 'weight' }, { type: 'Duty', amount: 3100, basis: 'value' }, { type: 'Handling', amount: 900, basis: 'qty' }],
+      receipts: [{ id: 'RC-9001', sku: 'RM-CAST', qty: 1200, value: 36000, weight: 9600 }, { id: 'RC-9002', sku: 'RM-CTRL', qty: 600, value: 52800, weight: 480 }] },
+    { id: 'SHP-502', vessel: 'MV Gulf Star', origin: 'Houston port', charges: [{ type: 'Freight', amount: 2600, basis: 'weight' }, { type: 'Insurance', amount: 700, basis: 'value' }],
+      receipts: [{ id: 'RC-9101', sku: 'RM-BUSH', qty: 9000, value: 31500, weight: 1800 }, { id: 'RC-9102', sku: 'RM-CAST', qty: 800, value: 24000, weight: 6400 }] }
+  ];
+
+  // Lot/serial traceability (genealogy)
+  SEED.lots = [
+    { lot: 'L-CAST-2205', sku: 'RM-CAST', plantId: 'SA', period: 'May 2025', qty: 1200, parents: [], status: 'Consumed' },
+    { lot: 'L-HOUS-2218', sku: 'SA-HOUSING', plantId: 'SA', period: 'May 2025', qty: 600, parents: ['L-CAST-2205'], status: 'Consumed' },
+    { lot: 'L-CTRL-2231', sku: 'RM-CTRL', plantId: 'SA', period: 'May 2025', qty: 600, parents: [], status: 'Consumed' },
+    { lot: 'L-GX200-2240', sku: 'GX-200', plantId: 'SA', period: 'May 2025', qty: 100, parents: ['L-HOUS-2218', 'L-CTRL-2231'], status: 'Shipped' },
+    { lot: 'L-GX450-2255', sku: 'GX-450', plantId: 'SA', period: 'May 2025', qty: 60, parents: ['L-HOUS-2218', 'L-CTRL-2231'], status: 'On hold' }
+  ];
+
+  // Subcontracting orders
+  SEED.subcontractOrders = [
+    { id: 'SC-701', supplier: 'Precision Forgings', operation: 'Heat treat & grind', sku: 'SA-HOUSING', qty: 600, serviceCost: 7200, componentsCost: 18000, status: 'Received' },
+    { id: 'SC-702', supplier: 'Apex Components', operation: 'Surface coating', sku: 'GX-450', qty: 60, serviceCost: 4800, componentsCost: 26000, status: 'Open' },
+    { id: 'SC-703', supplier: 'Rio Grande Alloys', operation: 'Casting', sku: 'RM-CAST', qty: 1200, serviceCost: 9600, componentsCost: 0, status: 'Received' }
+  ];
+
+  // RBAC / segregation-of-duties (from the ERP feature doc)
+  SEED.rbacCapabilities = ['View', 'Create', 'Edit', 'Approve', 'Post', 'Simulate', 'Report', 'Configure'];
+  SEED.rbacMatrix = [
+    { role: 'Cost accountant', caps: ['Y', 'Y', 'Y', 'L', 'Y', 'Y', 'Y', 'L'] },
+    { role: 'Production planner', caps: ['Y', 'Y', 'L', 'N', 'N', 'L', 'Y', 'N'] },
+    { role: 'Plant controller', caps: ['Y', 'L', 'L', 'Y', 'Y', 'Y', 'Y', 'L'] },
+    { role: 'Inventory manager', caps: ['Y', 'Y', 'Y', 'L', 'Y', 'N', 'Y', 'L'] },
+    { role: 'Procurement lead', caps: ['Y', 'Y', 'Y', 'Y', 'L', 'L', 'Y', 'L'] },
+    { role: 'Finance manager', caps: ['Y', 'Y', 'Y', 'Y', 'Y', 'Y', 'Y', 'L'] },
+    { role: 'CFO', caps: ['Y', 'N', 'N', 'Y', 'N', 'Y', 'Y', 'N'] },
+    { role: 'Shop floor supervisor', caps: ['Y', 'Y', 'L', 'N', 'L', 'N', 'Y', 'N'] },
+    { role: 'Quality manager', caps: ['Y', 'Y', 'Y', 'Y', 'L', 'N', 'Y', 'L'] },
+    { role: 'IT/ERP admin', caps: ['Y', 'L', 'Y', 'N', 'N', 'N', 'L', 'Y'] },
+    { role: 'Auditor', caps: ['Y', 'N', 'N', 'N', 'N', 'N', 'Y', 'N'] }
+  ];
+  SEED.sodControls = [
+    { area: 'Maintain cost records vs activate standard costs', split: 'Cost accountant prepares; controller/finance approves', control: 'Pending/active status, blocked activation, maker-checker, change logs' },
+    { area: 'Maintain overhead/allocation vs period close', split: 'Cost-accounting setup owner maintains; close owner posts', control: 'Effective dating, close freeze, audit trail, post-close rerun review' },
+    { area: 'Maintain BOM/routing vs cost release', split: 'Engineering owns structure; costing owns valuation; controller approves', control: 'ECO governance, rollup exception review, independent sample recalc' },
+    { area: 'Record scrap/NCR vs approve write-off', split: 'Shop floor/quality records; controller/finance approves', control: 'Reason codes, scrap accounts, NCR/CAPA workflow, variance review' },
+    { area: 'Create subcontract/landed charges vs approve invoice', split: 'Procurement creates; AP/finance approves; receiving confirms', control: 'Three-way match, landed-cost variance review, vendor-specific posting' },
+    { area: 'Configure roles vs assign roles vs review conflicts', split: 'Security admin configures; IAM assigns; internal audit reviews', control: 'Privileged access mgmt, quarterly recertification, emergency-access logging' }
+  ];
+
+  // Audit trail (change log for cost-relevant master data)
+  SEED.auditLog = [
+    { id: 'AUD-5001', ts: '2025-05-31 14:22', user: 'A. Cole', role: 'Cost accountant', area: 'Cost version', action: 'Create pending', field: 'GX-200 std cost', oldValue: '202.00', newValue: '208.00' },
+    { id: 'AUD-5002', ts: '2025-05-31 16:05', user: 'M. Reyes', role: 'Plant controller', area: 'Cost version', action: 'Review', field: 'CV-2025-H2', oldValue: 'Draft', newValue: 'Pending' },
+    { id: 'AUD-5003', ts: '2025-05-28 09:41', user: 'J. Whitfield', role: 'Engineering', area: 'BOM', action: 'Edit', field: 'GX-450 bushing qty', oldValue: '6', newValue: '8' },
+    { id: 'AUD-5004', ts: '2025-05-27 11:10', user: 'D. Lee', role: 'Procurement lead', area: 'Overhead rule', action: 'Edit', field: 'Machine-hour rate', oldValue: '24.00', newValue: '25.00' },
+    { id: 'AUD-5005', ts: '2025-05-25 17:33', user: 'S. Park', role: 'Finance manager', area: 'Posting profile', action: 'Edit', field: 'WIP account', oldValue: '1340', newValue: '1345' },
+    { id: 'AUD-5006', ts: '2025-05-24 08:50', user: 'Quality bot', role: 'Quality manager', area: 'Disposition', action: 'Post', field: 'NCR-3001 scrap', oldValue: '—', newValue: '4,200.00' }
+  ];
+
+  // Fixed assets (depreciation-bearing production equipment)
+  SEED.fixedAssets = [
+    { id: 'FA-1001', name: 'CNC Machining Center #1', plantId: 'SA', category: 'Machinery', acqDate: '2021-03', cost: 480000, accumDep: 192000, life: 10, method: 'Straight-line', annualDep: 48000 },
+    { id: 'FA-1002', name: 'Robotic Assembly Cell', plantId: 'SA', category: 'Machinery', acqDate: '2022-06', cost: 360000, accumDep: 108000, life: 8, method: 'Straight-line', annualDep: 45000 },
+    { id: 'FA-1003', name: 'Heat-Treat Furnace', plantId: 'RF', category: 'Machinery', acqDate: '2020-01', cost: 290000, accumDep: 174000, life: 10, method: 'Straight-line', annualDep: 29000 },
+    { id: 'FA-1004', name: 'Hydraulic Press 400T', plantId: 'MTY', category: 'Machinery', acqDate: '2023-02', cost: 215000, accumDep: 43000, life: 10, method: 'Straight-line', annualDep: 21500 },
+    { id: 'FA-1005', name: 'Plant Building — OKC', plantId: 'OKC', category: 'Building', acqDate: '2018-09', cost: 1250000, accumDep: 312500, life: 40, method: 'Straight-line', annualDep: 31250 },
+    { id: 'FA-1006', name: 'Forklift Fleet (6)', plantId: 'RF', category: 'Vehicles', acqDate: '2022-11', cost: 168000, accumDep: 50400, life: 7, method: 'Straight-line', annualDep: 24000 },
+    { id: 'FA-1007', name: 'Inspection CMM', plantId: 'SA', category: 'Equipment', acqDate: '2023-08', cost: 96000, accumDep: 16000, life: 8, method: 'Straight-line', annualDep: 12000 }
+  ];
+
+  // Cash & bank
+  SEED.bankAccounts = [
+    { id: 'BANK-OP', name: 'Operating account', bank: 'Frost Bank', currency: 'USD', plantId: 'SA', balance: 2840000 },
+    { id: 'BANK-PR', name: 'Payroll account', bank: 'Frost Bank', currency: 'USD', plantId: 'SA', balance: 615000 },
+    { id: 'BANK-MX', name: 'Monterrey operating', bank: 'BBVA Mexico', currency: 'MXN', plantId: 'MTY', balance: 1180000 },
+    { id: 'BANK-RES', name: 'Capex reserve', bank: 'Frost Bank', currency: 'USD', plantId: 'OKC', balance: 1450000 }
+  ];
+
   if (typeof module !== 'undefined' && module.exports) { module.exports = SEED; }
   else { (root.CACC = root.CACC || {}).SEED = SEED; }
 })(typeof window !== 'undefined' ? window : this);
