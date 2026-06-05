@@ -253,6 +253,17 @@ table.pivot td.cell:hover { background: var(--accent-weak); }
 table.pivot td.rowhead { font-weight: 600; }
 .dim-pickers { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
 
+/* ---------- Personalizable grid ---------- */
+.gridbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+table.dt tbody tr.grp td { background: var(--n-100); font-size: 12px; color: var(--text-dim); border-top: 2px solid var(--border-strong); text-transform: none; }
+
+/* ---------- Density (compact) ---------- */
+:root[data-density="compact"] table.dt th, :root[data-density="compact"] table.dt td { padding: 5px 10px; font-size: 12.5px; }
+:root[data-density="compact"] .kpi { padding: 12px 15px; }
+:root[data-density="compact"] .kpi-value { font-size: 22px; }
+:root[data-density="compact"] .card-pad { padding: 14px 16px; }
+:root[data-density="compact"] .gridbar { padding: 8px 12px; }
+
 /* ---------- Process-flow stage bar ---------- */
 .stagebar { display: flex; gap: 0; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 6px; }
 .stage { flex: 1; min-width: 96px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 10px; border: 0; background: transparent;

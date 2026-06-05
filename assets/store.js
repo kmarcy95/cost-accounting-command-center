@@ -37,6 +37,8 @@
     setModel: function (m) { LS.set(KEYS.model, m); },
     getTheme: function () { return LS.get('cacc.theme', 'dark'); },
     setTheme: function (t) { LS.set('cacc.theme', t); },
+    getDensity: function () { return LS.get('cacc.density', 'comfortable'); },
+    setDensity: function (d) { LS.set('cacc.density', d); },
     // saved custom-report templates
     getReports: function () { return LS.get('cacc.reports', []); },
     saveReport: function (name, config) { var r = LS.get('cacc.reports', []).filter(function (x) { return x.name !== name; }); r.push({ name: name, config: config }); LS.set('cacc.reports', r); },

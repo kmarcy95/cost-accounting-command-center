@@ -192,6 +192,17 @@
     CACC.store.setTheme(next); applyTheme(next); CACC.rerender();
   };
 
+  /* Density (comfortable <-> compact) */
+  function applyDensity(d) {
+    document.documentElement.setAttribute('data-density', d);
+    var btn = document.getElementById('densityToggle');
+    if (btn) btn.querySelector('span').textContent = d === 'compact' ? 'Comfortable' : 'Compact';
+  }
+  CACC.toggleDensity = function () {
+    var next = CACC.store.getDensity() === 'compact' ? 'comfortable' : 'compact';
+    CACC.store.setDensity(next); applyDensity(next);
+  };
+
   /* ---------- Table tools: click-to-sort + CSV export ---------- */
   function parseCell(text) {
     var t = (text || '').replace(/[,$%\s]/g, '').replace(/^\((.*)\)$/, '-$1');
@@ -487,6 +498,7 @@
     var d = CACC.store.data();
     document.getElementById('brandSub').textContent = d.group || d.company.name;
     applyTheme(CACC.store.getTheme());
+    applyDensity(CACC.store.getDensity());
     buildSidebar();
     buildGlobalFilter();
     document.addEventListener('keydown', globalKeys);

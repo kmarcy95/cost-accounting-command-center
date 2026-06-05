@@ -45,6 +45,9 @@
           <button class="cmd-btn" id="themeToggle" onclick="window.CACC.toggleTheme()" aria-label="Toggle dark terminal mode">
             <span>Terminal</span>
           </button>
+          <button class="cmd-btn" id="densityToggle" onclick="window.CACC.toggleDensity()" aria-label="Toggle row density">
+            <span>Compact</span>
+          </button>
           <span class="pill-env">Demo · seeded data</span>
         </div>
       </header>
@@ -70,6 +73,7 @@
   <script src="ai/claude-client.js"></script>
   <!-- App core (defines CACC.ui, icons, router) — must load before views -->
   <script src="assets/app.js"></script>
+  <script src="assets/grid.js"></script>
   <!-- Views register into CACC.views -->
   <script src="views/executive-overview.js"></script>
   <script src="views/profitability-cube.js"></script>
