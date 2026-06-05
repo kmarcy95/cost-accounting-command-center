@@ -253,6 +253,18 @@ table.pivot td.cell:hover { background: var(--accent-weak); }
 table.pivot td.rowhead { font-weight: 600; }
 .dim-pickers { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
 
+/* ---------- Warehouse bin map ---------- */
+.binmap { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+.bin { text-align: left; border: 1px solid var(--border); border-left-width: 4px; border-radius: 8px; padding: 9px 11px; background: var(--surface); cursor: pointer; font-family: inherit; color: var(--text); }
+.bin:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); }
+.bin-loc { font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+.bin-sku { font-weight: 700; font-size: 13px; margin-top: 1px; }
+.bin-qty { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+.bin-val { font-size: 12px; color: var(--text-muted); }
+.bin-ok { border-left-color: var(--good); }
+.bin-warn { border-left-color: var(--warn); }
+.bin-bad { border-left-color: var(--bad); }
+
 /* ---------- Metrics ticker (terminal-style) ---------- */
 .ticker { display: flex; gap: 14px; align-items: center; padding-right: 4px; }
 .tick { display: flex; align-items: baseline; gap: 6px; font-size: 12px; white-space: nowrap; }

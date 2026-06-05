@@ -151,6 +151,68 @@
       return t;
     },
 
+    /* ---- Finance: P&L from facts + SG&A from budget ---- */
+    financials: function () {
+      var facts = model.filtered();
+      var k = CACC.CubeEngine.kpis(facts);
+      var sgaRows = model.filteredBudget().filter(function (b) { return b.category === 'SG&A'; });
+      var sga = r2(sgaRows.reduce(function (s, b) { return s + b.actual; }, 0));
+      var sgaByPlant = {}; sgaRows.forEach(function (b) { sgaByPlant[b.plantId] = (sgaByPlant[b.plantId] || 0) + b.actual; });
+      var byPlant = CACC.CubeEngine.groupBy(facts, 'plantId', 'plantName').map(function (g) {
+        var s = r2(sgaByPlant[g.key] || 0), op = r2(g.grossProfit - s);
+        return { plantId: g.key, name: g.name, revenue: g.revenue, cogs: g.actualCost, grossProfit: g.grossProfit, sga: s, operating: op, opMarginPct: g.revenue ? r4(op / g.revenue) : 0 };
+      }).sort(function (a, b) { return b.revenue - a.revenue; });
+      var operating = r2(k.grossProfit - sga);
+      return { revenue: k.revenue, cogs: k.actualCost, grossProfit: k.grossProfit, grossMarginPct: k.marginPct,
+        sga: sga, operating: operating, opMarginPct: k.revenue ? r4(operating / k.revenue) : 0, netVariance: k.netVariance, byPlant: byPlant };
+    },
+
+    /* ---- HR: workforce ---- */
+    filteredWorkforce: function () {
+      var f = CACC.store.getFilter();
+      return (d().workforce || []).filter(function (w) { return (f.plantId === 'ALL' || w.plantId === f.plantId) && (f.period === 'ALL' || w.period === f.period); });
+    },
+    workforceByPlant: function () {
+      var rows = model.filteredWorkforce(), map = {};
+      rows.forEach(function (w) {
+        if (!map[w.plantId]) map[w.plantId] = { plantId: w.plantId, name: w.plantName, headcount: 0, directLabor: 0, indirectLabor: 0, laborCost: 0, _ot: 0, _to: 0, _n: 0 };
+        var m = map[w.plantId]; m.headcount += w.headcount; m.directLabor += w.directLabor; m.indirectLabor += w.indirectLabor; m.laborCost += w.laborCost; m._ot += w.overtimePct; m._to += w.turnoverPct; m._n += 1;
+      });
+      return Object.keys(map).map(function (k) {
+        var m = map[k]; m.laborCost = r2(m.laborCost); m.overtimePct = m._n ? r4(m._ot / m._n) : 0; m.turnoverPct = m._n ? r4(m._to / m._n) : 0;
+        m.costPerHead = m.headcount ? r2(m.laborCost / (m.headcount / (m._n || 1))) : 0; delete m._ot; delete m._to; return m;
+      }).sort(function (a, b) { return b.laborCost - a.laborCost; });
+    },
+    workforceTotals: function () {
+      var rows = model.filteredWorkforce(), n = rows.length || 1;
+      var head = rows.reduce(function (s, w) { return s + w.headcount; }, 0);
+      var cost = rows.reduce(function (s, w) { return s + w.laborCost; }, 0);
+      var periods = {}; rows.forEach(function (w) { periods[w.period] = 1; }); var np = Object.keys(periods).length || 1;
+      return { headcount: Math.round(head / np), laborCost: r2(cost), avgWage: r2(rows.reduce(function (s, w) { return s + w.avgWage; }, 0) / n),
+        overtimePct: r4(rows.reduce(function (s, w) { return s + w.overtimePct; }, 0) / n), turnoverPct: r4(rows.reduce(function (s, w) { return s + w.turnoverPct; }, 0) / n),
+        costPerHead: head ? r2(cost / head) : 0 };
+    },
+
+    /* ---- Supply Chain: warehouse on-hand from the subledger ---- */
+    warehouse: function () {
+      var f = CACC.store.getFilter();
+      var txns = (d().transactions || []).filter(function (t) { return f.plantId === 'ALL' || t.plantId === f.plantId; });
+      var map = {};
+      txns.forEach(function (t) {
+        var key = t.plantId + t.sku;
+        if (!map[key]) map[key] = { plantId: t.plantId, plantName: t.plantName, sku: t.sku, productName: t.productName, qty: 0, lastCost: t.unitCost };
+        map[key].qty += t.qty; map[key].lastCost = t.unitCost;
+      });
+      var rows = Object.keys(map).map(function (k) {
+        var x = map[k]; x.qty = Math.round(x.qty); x.value = r2(Math.max(0, x.qty) * x.lastCost);
+        x.bin = 'A' + (x.sku.charCodeAt(0) % 9 + 1) + '-' + (x.sku.charCodeAt(3) % 20 + 1);
+        x.status = x.qty <= 0 ? 'Stockout' : x.qty < 200 ? 'Low' : 'In stock';
+        return x;
+      }).sort(function (a, b) { return b.value - a.value; });
+      return { rows: rows, totalValue: r2(rows.reduce(function (s, r) { return s + r.value; }, 0)), skus: rows.length,
+        low: rows.filter(function (r) { return r.status !== 'In stock'; }).length };
+    },
+
     filterLabel: function () {
       var f = CACC.store.getFilter();
       var p = (d().plants || []).filter(function (x) { return x.id === f.plantId; })[0];
@@ -266,6 +328,9 @@
       budget: function () { return { group: d().group, filter: model.filterLabel(), categories: model.budgetByCategory() }; },
       procurement: function () { return { group: d().group, filter: model.filterLabel(), totals: model.procurementTotals(), suppliers: model.supplierSpend() }; },
       projects: function () { return { group: d().group, filter: model.filterLabel(), totals: model.projectTotals(), projects: model.projects() }; },
+      financials: function () { return { group: d().group, filter: model.filterLabel(), pl: model.financials() }; },
+      workforce: function () { return { group: d().group, filter: model.filterLabel(), totals: model.workforceTotals(), byPlant: model.workforceByPlant() }; },
+      warehouse: function () { return { group: d().group, filter: model.filterLabel(), warehouse: model.warehouse() }; },
       profitabilityCube: function () {
         return { group: d().group, filter: model.filterLabel(), kpis: model.execKpis(), topCustomers: model.topCustomers(5),
           byProduct: CACC.CubeEngine.groupBy(model.filtered(), 'sku', 'productName').sort(function (a, b) { return b.grossProfit - a.grossProfit; }) };

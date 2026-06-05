@@ -313,6 +313,21 @@
       return { id: 'PRJ-' + (1001 + i), name: p[0], customerId: p[1], customer: cust ? cust.name : p[1], plantId: p[2], plantName: plant ? plant.name : p[2],
         budget: budget, actualCost: actual, billed: billed, pctComplete: pct, status: status, margin: r2(billed - actual) };
     });
+
+    // Human Resources — workforce per plant x period
+    var wf = [];
+    SEED.periods.forEach(function (period) {
+      SEED.plants.forEach(function (plant) {
+        var seed = 'wf' + period + plant.id;
+        var head = Math.round(plant.factor * 480 * jit(seed + 'h', 0.95, 1.06));
+        var direct = Math.round(head * 0.68);
+        var avgWage = r2(jit(seed + 'w', 26, 34));
+        wf.push({ period: period, plantId: plant.id, plantName: plant.name, headcount: head, directLabor: direct, indirectLabor: head - direct,
+          avgWage: avgWage, laborCost: r2(head * avgWage * 173 * jit(seed + 'c', 0.98, 1.05)),
+          overtimePct: Math.round(jit(seed + 'o', 0.03, 0.14) * 10000) / 10000, turnoverPct: Math.round(jit(seed + 't', 0.01, 0.06) * 10000) / 10000 });
+      });
+    });
+    SEED.workforce = wf;
   })();
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = SEED; }

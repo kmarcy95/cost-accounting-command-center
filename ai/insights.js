@@ -325,6 +325,47 @@
         ],
         bullets: c.projects.map(function (p) { return p.id + ' ' + p.name + ': margin ' + fmt.money0(p.margin) + ' · ' + fmt.pct(p.pctComplete * 100) + ' complete · ' + p.status; })
       };
+    },
+
+    financials: function (c) {
+      var p = c.pl, lead = p.byPlant[0], lag = p.byPlant[p.byPlant.length - 1];
+      return {
+        headline: 'Income statement',
+        paragraphs: [
+          'For ' + c.filter + ', revenue of ' + fmt.money0(p.revenue) + ' less COGS of ' + fmt.money0(p.cogs) + ' yields ' +
+          fmt.money0(p.grossProfit) + ' gross profit (' + fmt.pct(p.grossMarginPct * 100) + '). After ' + fmt.money0(p.sga) +
+          ' SG&A, operating income is ' + fmt.money0(p.operating) + ' (' + fmt.pct(p.opMarginPct * 100) + ' operating margin).',
+          (lead ? lead.name + ' contributes the most operating income (' + fmt.money0(lead.operating) + '). ' : '') +
+          (lag && lag !== lead ? lag.name + ' is the thinnest at ' + fmt.pct(lag.opMarginPct * 100) + ' — a candidate for cost or pricing action.' : '')
+        ],
+        bullets: p.byPlant.map(function (g) { return g.name + ': op income ' + fmt.money0(g.operating) + ' (' + fmt.pct(g.opMarginPct * 100) + ')'; })
+      };
+    },
+
+    workforce: function (c) {
+      var t = c.totals;
+      return {
+        headline: 'Workforce & labor efficiency',
+        paragraphs: [
+          'For ' + c.filter + ', headcount is ' + fmt.num(t.headcount, 0) + ' at a labor cost of ' + fmt.money0(t.laborCost) +
+          ' (' + fmt.money0(t.costPerHead) + '/head). Overtime runs ' + fmt.pct(t.overtimePct * 100) + ' and turnover ' + fmt.pct(t.turnoverPct * 100) + '.',
+          'Track output per labor hour and labor cost per unit against the standard — rising overtime with flat output signals a capacity or scheduling problem, not a demand one.'
+        ],
+        bullets: c.byPlant.map(function (g) { return g.name + ': ' + fmt.money0(g.laborCost) + ' labor · OT ' + fmt.pct(g.overtimePct * 100) + ' · turnover ' + fmt.pct(g.turnoverPct * 100); })
+      };
+    },
+
+    warehouse: function (c) {
+      var w = c.warehouse, top = w.rows[0];
+      return {
+        headline: 'Warehouse visibility',
+        paragraphs: [
+          'On-hand inventory is valued at ' + fmt.money0(w.totalValue) + ' across ' + w.skus + ' SKU-locations, with ' + w.low +
+          ' at low stock or stockout. ' + (top ? top.sku + ' at ' + top.bin + ' holds the most value (' + fmt.money0(top.value) + ').' : ''),
+          'Use the bin map to spot concentration and replenishment risk by location; click a bin to see its movement history.'
+        ],
+        bullets: w.rows.slice(0, 5).map(function (r) { return r.sku + ' @ ' + r.bin + ': ' + fmt.num(r.qty, 0) + ' u · ' + fmt.money0(r.value) + ' · ' + r.status; })
+      };
     }
   };
 
