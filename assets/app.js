@@ -315,6 +315,19 @@
   }
   CACC.closeAllWindows = function () { openWindows.slice().forEach(function (close) { close(); }); };
 
+  /* ---------- Business-process-flow stage bar ---------- */
+  ui.stageBar = function (stages, activeIndex, onClick) {
+    var bar = el('div', { class: 'stagebar' });
+    stages.forEach(function (s, i) {
+      var cls = i < activeIndex ? 'stage done' : i === activeIndex ? 'stage active' : 'stage';
+      bar.appendChild(el('button', { class: cls, onclick: onClick ? function () { onClick(i, s); } : null }, [
+        el('span', { class: 'stage-dot', text: i < activeIndex ? '✓' : String(i + 1) }),
+        el('span', { class: 'stage-label', text: s })
+      ]));
+    });
+    return bar;
+  };
+
   /* ---------- Nav + router ---------- */
   var NAV = [
     { key: 'executiveOverview', label: 'Executive Overview', icon: 'dashboard', section: 'Overview' },
@@ -323,6 +336,8 @@
     { key: 'profitabilityCube', label: 'Profitability Cube', icon: 'product', section: 'Group analytics' },
     { key: 'budgetActual', label: 'Budget vs Actual', icon: 'variance', section: 'Group analytics' },
     { key: 'salesOrders', label: 'Sales Orders', icon: 'dollar', section: 'Group analytics' },
+    { key: 'quotes', label: 'Quotes & Opportunities', icon: 'briefcase', section: 'Sales & projects' },
+    { key: 'resourceScheduling', label: 'Resource Scheduling', icon: 'users', section: 'Sales & projects' },
     { key: 'reportBuilder', label: 'Report Builder', icon: 'report', section: 'Reports' },
     { key: 'financials', label: 'Financial Statements', icon: 'dollar', section: 'Finance' },
     { key: 'standardCosting', label: 'Standard Costing', icon: 'variance', section: 'Cost analysis' },

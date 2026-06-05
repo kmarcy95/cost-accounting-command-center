@@ -379,6 +379,32 @@
         ],
         bullets: (c.orders || []).slice(0, 5).map(function (o) { return o.id + ' ' + o.customer + ' · ' + o.sku + ' · ' + fmt.money0(o.amount) + ' · ' + o.status; })
       };
+    },
+
+    resourceScheduling: function (c) {
+      var t = c.totals;
+      return {
+        headline: 'Resource scheduling',
+        paragraphs: [
+          'For ' + c.filter + ', ' + t.resources + ' resources are ' + fmt.pct(t.utilization * 100) + ' utilized (' + fmt.num(t.allocated, 0) +
+          ' of ' + fmt.num(t.capacity, 0) + ' hours). ' + t.over + ' resource-period(s) are overbooked above 100%.',
+          'Rebalance overbooked resources to under-utilized ones in the same skill/role before committing new project work; sustained >100% allocation drives overtime and slippage.'
+        ],
+        bullets: c.board.rows.slice().sort(function (a, b) { return b.util - a.util; }).slice(0, 5).map(function (r) { return r.resource.name + ' (' + r.resource.role + '): ' + fmt.pct(r.util * 100) + ' utilized'; })
+      };
+    },
+
+    quotes: function (c) {
+      var p = c.pipeline, q = p.stages.filter(function (s) { return s.stage === 'Quote'; })[0];
+      return {
+        headline: 'Sales pipeline',
+        paragraphs: [
+          'For ' + c.filter + ', the pipeline holds ' + fmt.money0(p.totalAmount) + ' across ' + p.opportunities.length + ' opportunities, weighting to ' +
+          fmt.money0(p.weighted) + ' by probability. Open (not yet won/lost) value is ' + fmt.money0(p.openValue) + '; win rate is ' + fmt.pct(p.winRate * 100) + '.',
+          (q ? fmt.money0(q.amount) + ' sits at the Quote stage — the nearest-term conversion lever. ' : '') + 'Prioritize high-probability, high-value deals and clear stalled quotes.'
+        ],
+        bullets: p.stages.map(function (s) { return s.stage + ': ' + s.count + ' deals · ' + fmt.money0(s.amount); })
+      };
     }
   };
 

@@ -339,6 +339,59 @@
         sku: fct.sku, productName: fct.productName, qty: fct.units, price: r2(fct.revenue / (fct.units || 1)), amount: fct.revenue, margin: fct.grossProfit, status: status });
     });
     SEED.salesOrders = sos;
+
+    // Project Operations — WBS tasks, time-phased estimates, resources per project
+    SEED.projectStages = ['New', 'Quote', 'Plan', 'Deliver', 'Complete', 'Close'];
+    var roleRates = { 'Project Manager': 95, 'Consulting Lead': 110, 'Engineer': 85, 'Technician': 60, 'Analyst': 70 };
+    var roles = Object.keys(roleRates);
+    var taskNames = ['Discovery & design', 'Build & configure', 'Integration', 'Testing & UAT', 'Deployment', 'Documentation'];
+    SEED.projects.forEach(function (proj) {
+      proj.stageIndex = proj.status === 'Complete' ? 4 : proj.status === 'Planning' ? 2 : 3;
+      var nTasks = 3 + Math.round(jit('t' + proj.id, 0, 3));
+      var tasks = [];
+      for (var k = 0; k < nTasks; k++) {
+        var seed = proj.id + 'task' + k, role = roles[hash(seed) % roles.length], rate = roleRates[role];
+        var estHours = Math.round(jit(seed + 'h', 80, 600) / 8) * 8;
+        var pct = Math.min(1, proj.pctComplete * jit(seed + 'p', 0.7, 1.2));
+        var actualHours = Math.round(estHours * pct);
+        var span = 1 + Math.round(jit(seed + 's', 0, SEED.periods.length - 1)), per = Math.round(estHours / span), ph = {};
+        for (var pidx = 0; pidx < span; pidx++) ph[SEED.periods[pidx]] = per;
+        tasks.push({ id: proj.id + '-T' + (k + 1), wbs: (k + 1) + '.0', name: taskNames[k % taskNames.length], role: role, rate: rate,
+          estHours: estHours, actualHours: actualHours, estCost: r2(estHours * rate), actualCost: r2(actualHours * rate * jit(seed + 'c', 0.95, 1.1)),
+          pctComplete: Math.round(pct * 100) / 100, periodHours: ph });
+      }
+      proj.tasks = tasks;
+      var byRole = {};
+      tasks.forEach(function (t) { if (!byRole[t.role]) byRole[t.role] = { role: t.role, rate: t.rate, hours: 0, cost: 0 }; byRole[t.role].hours += t.estHours; byRole[t.role].cost += t.estCost; });
+      proj.resources = Object.keys(byRole).map(function (r) { return byRole[r]; });
+    });
+
+    // Resource pool + schedule-board bookings
+    var resDefs = [['Ryan Brim', 'Engineer', 'SA'], ['Abraham McCoy', 'Technician', 'RF'], ['Allison Dickson', 'Analyst', 'MTY'], ['Ashley Chinn', 'Consulting Lead', 'SA'],
+      ['Bob Kozak', 'Engineer', 'OKC'], ['Brady Hannon', 'Technician', 'RF'], ['Cheri Castaneda', 'Analyst', 'SA'], ['Christal Robles', 'Project Manager', 'MTY'],
+      ['Van Amundson', 'Engineer', 'OKC'], ['Bernadette Foss', 'Consulting Lead', 'RF']];
+    SEED.resources = resDefs.map(function (d, i) { return { id: 'R' + (100 + i), name: d[0], role: d[1], plantId: d[2], rate: roleRates[d[1]] || 80, capacity: 173 }; });
+    var bookings = [];
+    SEED.resources.forEach(function (res) {
+      SEED.periods.forEach(function (period) {
+        var alloc = Math.round(jit('bk' + res.id + period, 40, 215));
+        bookings.push({ resourceId: res.id, name: res.name, role: res.role, plantId: res.plantId, period: period, allocated: alloc, capacity: res.capacity, utilization: Math.round(alloc / res.capacity * 100) / 100 });
+      });
+    });
+    SEED.bookings = bookings;
+
+    // Opportunities / Quotes pipeline
+    SEED.oppStages = ['Lead', 'Opportunity', 'Quote', 'Won', 'Lost'];
+    var owners = ['Alan Steiner', 'Maria Cruz', 'James Whitfield', 'Dana Lee'];
+    var oppKinds = ['Upgrade', 'Retrofit', 'Expansion', 'New Line', 'Service Contract'];
+    SEED.opportunities = [];
+    for (var oi = 0; oi < 14; oi++) {
+      var s = 'opp' + oi, cust = SEED.customers[hash(s) % SEED.customers.length], stageIdx = hash(s + 'st') % 5;
+      var amount = r2(jit(s + 'a', 60000, 900000)), prob = [0.1, 0.35, 0.6, 1.0, 0][stageIdx];
+      SEED.opportunities.push({ id: 'OPP-' + (2001 + oi), name: cust.name + ' — ' + oppKinds[hash(s + 'k') % oppKinds.length], customerId: cust.id, customer: cust.name,
+        owner: owners[hash(s + 'o') % owners.length], stage: SEED.oppStages[stageIdx], stageIndex: stageIdx, amount: amount, probability: prob, weighted: r2(amount * prob),
+        closeDate: SEED.periods[hash(s + 'd') % SEED.periods.length], plantId: SEED.plants[hash(s + 'pl') % SEED.plants.length].id });
+    }
   })();
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = SEED; }

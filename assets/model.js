@@ -164,6 +164,46 @@
       return t;
     },
 
+    /* ---- Resource scheduling (schedule board) ---- */
+    filteredBookings: function () {
+      var f = CACC.store.getFilter();
+      return (d().bookings || []).filter(function (b) { return (f.plantId === 'ALL' || b.plantId === f.plantId) && (f.period === 'ALL' || b.period === f.period); });
+    },
+    scheduleBoard: function () {
+      var f = CACC.store.getFilter();
+      var res = (d().resources || []).filter(function (r) { return f.plantId === 'ALL' || r.plantId === f.plantId; });
+      var periods = f.period === 'ALL' ? (d().periods || []) : [f.period];
+      var bookings = d().bookings || [];
+      return { periods: periods, rows: res.map(function (r) {
+        var cells = periods.map(function (p) { var b = bookings.filter(function (x) { return x.resourceId === r.id && x.period === p; })[0]; return b ? { allocated: b.allocated, capacity: b.capacity, utilization: b.utilization } : { allocated: 0, capacity: r.capacity, utilization: 0 }; });
+        var ta = cells.reduce(function (s, c) { return s + c.allocated; }, 0), tc = cells.reduce(function (s, c) { return s + c.capacity; }, 0);
+        return { resource: r, cells: cells, util: tc ? r4(ta / tc) : 0, allocated: ta };
+      }) };
+    },
+    resourceTotals: function () {
+      var rows = model.filteredBookings(), f = CACC.store.getFilter();
+      var alloc = rows.reduce(function (s, b) { return s + b.allocated; }, 0), cap = rows.reduce(function (s, b) { return s + b.capacity; }, 0);
+      return { resources: (d().resources || []).filter(function (r) { return f.plantId === 'ALL' || r.plantId === f.plantId; }).length,
+        allocated: alloc, capacity: cap, utilization: cap ? r4(alloc / cap) : 0, over: rows.filter(function (b) { return b.utilization > 1; }).length };
+    },
+
+    /* ---- Sales pipeline (Quotes & Opportunities) ---- */
+    filteredOpportunities: function () {
+      var f = CACC.store.getFilter();
+      return (d().opportunities || []).filter(function (o) { return f.plantId === 'ALL' || o.plantId === f.plantId; });
+    },
+    pipeline: function () {
+      var rows = model.filteredOpportunities(), byStage = {};
+      (d().oppStages || []).forEach(function (st) { byStage[st] = { stage: st, count: 0, amount: 0, weighted: 0 }; });
+      rows.forEach(function (o) { var b = byStage[o.stage]; if (b) { b.count++; b.amount += o.amount; b.weighted += o.weighted; } });
+      var stages = Object.keys(byStage).map(function (k) { var x = byStage[k]; x.amount = r2(x.amount); x.weighted = r2(x.weighted); return x; });
+      var won = byStage['Won'] || { count: 0 }, lost = byStage['Lost'] || { count: 0 };
+      var open = rows.filter(function (o) { return o.stage !== 'Won' && o.stage !== 'Lost'; });
+      return { stages: stages, opportunities: rows, totalAmount: r2(rows.reduce(function (s, o) { return s + o.amount; }, 0)),
+        weighted: r2(rows.reduce(function (s, o) { return s + o.weighted; }, 0)), openValue: r2(open.reduce(function (s, o) { return s + o.amount; }, 0)),
+        winRate: (won.count + lost.count) ? r4(won.count / (won.count + lost.count)) : 0 };
+    },
+
     /* ---- Finance: P&L from facts + SG&A from budget ---- */
     financials: function () {
       var facts = model.filtered();
@@ -344,6 +384,8 @@
       financials: function () { return { group: d().group, filter: model.filterLabel(), pl: model.financials() }; },
       workforce: function () { return { group: d().group, filter: model.filterLabel(), totals: model.workforceTotals(), byPlant: model.workforceByPlant() }; },
       warehouse: function () { return { group: d().group, filter: model.filterLabel(), warehouse: model.warehouse() }; },
+      resourceScheduling: function () { return { group: d().group, filter: model.filterLabel(), totals: model.resourceTotals(), board: model.scheduleBoard() }; },
+      quotes: function () { return { group: d().group, filter: model.filterLabel(), pipeline: model.pipeline() }; },
       profitabilityCube: function () {
         return { group: d().group, filter: model.filterLabel(), kpis: model.execKpis(), topCustomers: model.topCustomers(5),
           byProduct: CACC.CubeEngine.groupBy(model.filtered(), 'sku', 'productName').sort(function (a, b) { return b.grossProfit - a.grossProfit; }) };
