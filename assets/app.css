@@ -240,6 +240,19 @@ input.num { text-align: right; font-variant-numeric: tabular-nums; }
 .range-row input[type=range] { width: 100%; }
 .range-row .rv { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 
+/* ---------- Global filters ---------- */
+.gfilter { display: flex; gap: 8px; align-items: center; }
+.gsel { font-family: inherit; font-size: 12.5px; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: 7px; padding: 6px 9px; cursor: pointer; max-width: 170px; }
+.gsel:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(15,108,189,.15); }
+@media (max-width: 980px) { .gfilter { display: none; } }
+
+/* ---------- Pivot table ---------- */
+table.pivot td.cell { text-align: right; font-variant-numeric: tabular-nums; cursor: pointer; }
+table.pivot td.cell:hover { background: var(--accent-weak); }
+table.pivot td.rowhead { font-weight: 600; }
+.dim-pickers { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+
 /* ---------- Metrics ticker (terminal-style) ---------- */
 .ticker { display: flex; gap: 14px; align-items: center; padding-right: 4px; }
 .tick { display: flex; align-items: baseline; gap: 6px; font-size: 12px; white-space: nowrap; }

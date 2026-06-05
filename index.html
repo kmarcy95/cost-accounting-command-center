@@ -37,6 +37,7 @@
           <div class="crumb" id="viewCrumb"></div>
         </div>
         <div class="topbar-actions">
+          <div class="gfilter" id="globalFilter" aria-label="Global filters"></div>
           <div class="ticker" id="ticker" aria-label="Key metrics"></div>
           <button class="cmd-btn" onclick="window.CACC.openPalette()" aria-label="Open command palette">
             <span>Jump</span><kbd>Ctrl K</kbd>
@@ -59,6 +60,7 @@
   <script src="engines/diagnostic-engine.js"></script>
   <script src="engines/inventory-reserve-engine.js"></script>
   <script src="engines/journal-entries-engine.js"></script>
+  <script src="engines/cube-engine.js"></script>
   <!-- Data + store + derived model -->
   <script src="assets/seed-data.js"></script>
   <script src="assets/store.js"></script>
@@ -69,6 +71,11 @@
   <!-- App core (defines CACC.ui, icons, router) — must load before views -->
   <script src="assets/app.js"></script>
   <!-- Views register into CACC.views -->
+  <script src="views/executive-overview.js"></script>
+  <script src="views/profitability-cube.js"></script>
+  <script src="views/budget-actual.js"></script>
+  <script src="views/inventory-subledger.js"></script>
+  <script src="views/cost-ledger.js"></script>
   <script src="views/dashboard.js"></script>
   <script src="views/trends.js"></script>
   <script src="views/standard-costing.js"></script>

@@ -71,6 +71,61 @@
       return { products: rows, totals: totals };
     },
 
+    /* ---- Multi-plant group (Keystone Industrial Group) ---- */
+    nameField: function (field) { return { sku: 'productName', plantId: 'plantName', customerId: 'customerName' }[field] || null; },
+    facts: function () { return d().facts || []; },
+    filtered: function (extra) {
+      var f = Object.assign({}, CACC.store.getFilter(), extra || {});
+      return CACC.CubeEngine.filterFacts(d().facts || [], f);
+    },
+    execKpis: function () { return CACC.CubeEngine.kpis(model.filtered()); },
+    plantScorecard: function () {
+      var f = CACC.store.getFilter();
+      var rows = CACC.CubeEngine.filterFacts(d().facts || [], { period: f.period, plantId: 'ALL' });
+      var groups = CACC.CubeEngine.groupBy(rows, 'plantId', 'plantName');
+      var plantMap = {}; (d().plants || []).forEach(function (p) { plantMap[p.id] = p; });
+      groups.forEach(function (g) { g.capacity = plantMap[g.key] ? plantMap[g.key].capacity : null; g.location = plantMap[g.key] ? plantMap[g.key].location : ''; });
+      return groups.sort(function (a, b) { return b.revenue - a.revenue; });
+    },
+    revenueSeries: function () {
+      var f = CACC.store.getFilter();
+      var rows = CACC.CubeEngine.filterFacts(d().facts || [], { plantId: f.plantId });
+      return { revenue: CACC.CubeEngine.series(rows, d().periods, 'revenue'), grossProfit: CACC.CubeEngine.series(rows, d().periods, 'grossProfit') };
+    },
+    topCustomers: function (n) { return CACC.CubeEngine.topN(model.filtered(), 'customerId', 'customerName', 'grossProfit', n || 6); },
+    cube: function (rowField, colField, measure) {
+      return CACC.CubeEngine.pivot(model.filtered(), rowField, model.nameField(rowField), colField, model.nameField(colField), measure);
+    },
+    filteredTxns: function () {
+      var f = CACC.store.getFilter();
+      return (d().transactions || []).filter(function (t) { return (f.plantId === 'ALL' || t.plantId === f.plantId) && (f.period === 'ALL' || t.date === f.period); });
+    },
+    filteredLedger: function () {
+      var f = CACC.store.getFilter();
+      return (d().ledger || []).filter(function (t) { return (f.plantId === 'ALL' || t.plantId === f.plantId) && (f.period === 'ALL' || t.date === f.period); });
+    },
+    filteredBudget: function () {
+      var f = CACC.store.getFilter();
+      return (d().budget || []).filter(function (t) { return (f.plantId === 'ALL' || t.plantId === f.plantId) && (f.period === 'ALL' || t.period === f.period); });
+    },
+    budgetByCategory: function () {
+      var rows = model.filteredBudget(), map = {};
+      rows.forEach(function (r) {
+        if (!map[r.category]) map[r.category] = { category: r.category, budget: 0, actual: 0 };
+        map[r.category].budget += r.budget; map[r.category].actual += r.actual;
+      });
+      return Object.keys(map).map(function (k) {
+        var x = map[k]; x.budget = r2(x.budget); x.actual = r2(x.actual);
+        x.variance = r2(x.actual - x.budget); x.variancePct = x.budget ? r4(x.variance / x.budget) : 0;
+        return x;
+      });
+    },
+    filterLabel: function () {
+      var f = CACC.store.getFilter();
+      var p = (d().plants || []).filter(function (x) { return x.id === f.plantId; })[0];
+      return (p ? p.name : 'All Plants') + ' · ' + (f.period === 'ALL' ? 'All Periods' : f.period);
+    },
+
     /* Cross-module alerts derived from the engines (drives dashboard alert panel) */
     alerts: function () {
       var out = [];
@@ -173,6 +228,15 @@
       journal: function () { return { company: d().company, journal: model.journal() }; },
       capacity: function () { return { company: d().company, capacity: model.capacity() }; },
       profitability: function () { return { company: d().company, profitability: model.profitability() }; },
+      executive: function () {
+        return { group: d().group, filter: model.filterLabel(), kpis: model.execKpis(),
+          plants: model.plantScorecard(), topCustomers: model.topCustomers(5) };
+      },
+      budget: function () { return { group: d().group, filter: model.filterLabel(), categories: model.budgetByCategory() }; },
+      profitabilityCube: function () {
+        return { group: d().group, filter: model.filterLabel(), kpis: model.execKpis(), topCustomers: model.topCustomers(5),
+          byProduct: CACC.CubeEngine.groupBy(model.filtered(), 'sku', 'productName').sort(function (a, b) { return b.grossProfit - a.grossProfit; }) };
+      },
       trends: function () {
         var h = model.history();
         var first = h[0] || {}, last = h[h.length - 1] || {};

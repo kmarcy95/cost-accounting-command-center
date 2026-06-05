@@ -254,6 +254,50 @@
           return x.sku + ': ' + fmt.money(x.unitMargin) + '/u (' + fmt.pct(x.marginPct * 100) + ') · annual ' + fmt.money0(x.annualMargin);
         })
       };
+    },
+
+    executive: function (c) {
+      var k = c.kpis, topPlant = c.plants[0], topCust = c.topCustomers[0];
+      return {
+        headline: c.group + ' — executive summary',
+        paragraphs: [
+          'For ' + c.filter + ', the group posted ' + fmt.money0(k.revenue) + ' of revenue at a ' + fmt.pct(k.marginPct * 100) +
+          ' gross margin (' + fmt.money0(k.grossProfit) + '), with a net manufacturing variance of ' + fmt.money0(Math.abs(k.netVariance)) +
+          ' ' + (k.netVariance > 0 ? 'unfavorable' : 'favorable') + '. ' + (topPlant ? topPlant.name + ' is the revenue leader at ' + fmt.money0(topPlant.revenue) + '.' : ''),
+          (topCust ? topCust.name + ' is the most profitable customer (' + fmt.money0(topCust.grossProfit) + ' gross profit). ' : '') +
+          'Use the Profitability Cube to see where margin concentrates and the Plant Scorecard to target the weakest plant.'
+        ],
+        bullets: c.plants.map(function (p) { return p.name + ': ' + fmt.money0(p.revenue) + ' rev · ' + fmt.pct(p.marginPct * 100) + ' GM · variance ' + fmt.money0(Math.abs(p.netVariance)) + (p.netVariance > 0 ? ' U' : ' F'); })
+      };
+    },
+
+    budget: function (c) {
+      var over = c.categories.filter(function (x) { return x.variance > 0; }).sort(function (a, b) { return b.variance - a.variance; })[0];
+      var tb = c.categories.reduce(function (s, x) { return s + x.budget; }, 0), ta = c.categories.reduce(function (s, x) { return s + x.actual; }, 0);
+      return {
+        headline: 'Budget vs actual',
+        paragraphs: [
+          'For ' + c.filter + ', actual spend of ' + fmt.money0(ta) + ' is ' + (ta > tb ? 'over' : 'under') + ' the ' + fmt.money0(tb) +
+          ' budget by ' + fmt.money0(Math.abs(ta - tb)) + ' (' + fmt.pct(tb ? Math.abs((ta - tb) / tb) * 100 : 0) + '). ' +
+          (over ? over.category + ' is the biggest overrun at ' + fmt.money0(over.variance) + ' (' + fmt.pct(over.variancePct * 100) + ').' : 'No category is materially over budget.'),
+          'Drill any category into its plant breakdown to find where the overrun originates before the next forecast cycle.'
+        ],
+        bullets: c.categories.map(function (x) { return x.category + ': budget ' + fmt.money0(x.budget) + ' vs actual ' + fmt.money0(x.actual) + ' (' + (x.variance > 0 ? '+' : '') + fmt.pct(x.variancePct * 100) + ')'; })
+      };
+    },
+
+    profitabilityCube: function (c) {
+      var k = c.kpis, top = c.byProduct[0], bottom = c.byProduct[c.byProduct.length - 1];
+      return {
+        headline: 'Profitability cube',
+        paragraphs: [
+          'Sliced to ' + c.filter + ', gross profit totals ' + fmt.money0(k.grossProfit) + ' on ' + fmt.money0(k.revenue) +
+          ' revenue (' + fmt.pct(k.marginPct * 100) + ' margin). ' + (top ? top.name + ' leads product margin at ' + fmt.money0(top.grossProfit) + '.' : ''),
+          'Pivot rows/columns across product, plant, customer and period to find the most and least profitable intersections; click any cell to see the underlying fact rows.'
+        ],
+        bullets: c.byProduct.map(function (x) { return x.name + ': ' + fmt.money0(x.grossProfit) + ' GP (' + fmt.pct(x.marginPct * 100) + ')'; })
+          .concat(c.topCustomers.slice(0, 3).map(function (x) { return 'Customer ' + x.name + ': ' + fmt.money0(x.grossProfit) + ' GP'; }))
+      };
     }
   };
 

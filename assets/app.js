@@ -286,8 +286,11 @@
 
   /* ---------- Nav + router ---------- */
   var NAV = [
-    { key: 'dashboard', label: 'Dashboard', icon: 'dashboard', section: 'Overview' },
+    { key: 'executiveOverview', label: 'Executive Overview', icon: 'dashboard', section: 'Overview' },
+    { key: 'dashboard', label: 'Cost Dashboard', icon: 'gauge', section: 'Overview' },
     { key: 'trends', label: 'Trends & Analytics', icon: 'cvp', section: 'Overview' },
+    { key: 'profitabilityCube', label: 'Profitability Cube', icon: 'product', section: 'Group analytics' },
+    { key: 'budgetActual', label: 'Budget vs Actual', icon: 'variance', section: 'Group analytics' },
     { key: 'standardCosting', label: 'Standard Costing', icon: 'variance', section: 'Cost analysis' },
     { key: 'productCosting', label: 'Product Costing', icon: 'product', section: 'Cost analysis' },
     { key: 'inventory', label: 'Inventory & Cost Flows', icon: 'inventory', section: 'Cost analysis' },
@@ -296,7 +299,9 @@
     { key: 'capacity', label: 'Capacity & Overhead', icon: 'gauge', section: 'Cost analysis' },
     { key: 'profitability', label: 'Profitability', icon: 'margin', section: 'Cost analysis' },
     { key: 'itemMaster', label: 'Item Master', icon: 'list', section: 'Catalog' },
-    { key: 'journal', label: 'Journal Entries', icon: 'ledger', section: 'Records' },
+    { key: 'inventorySubledger', label: 'Inventory Subledger', icon: 'inventory', section: 'Ledgers' },
+    { key: 'costLedger', label: 'Cost Ledger', icon: 'ledger', section: 'Ledgers' },
+    { key: 'journal', label: 'Journal Entries', icon: 'ledger', section: 'Ledgers' },
     { key: 'diagnostic', label: 'Day-1 Diagnostic', icon: 'diagnostic', section: 'Advisory' },
     { key: 'settings', label: 'Settings', icon: 'settings', section: 'Advisory' }
   ];
@@ -406,14 +411,33 @@
     }
   }
 
+  /* ---------- Global Plant + Period filters ---------- */
+  function buildGlobalFilter() {
+    var host = document.getElementById('globalFilter'); if (!host) return;
+    clear(host);
+    var d = CACC.store.data(), f = CACC.store.getFilter();
+    if (!d.plants) return;
+    var plantSel = el('select', { class: 'gsel', 'aria-label': 'Plant',
+      onchange: function () { CACC.store.setFilter({ plantId: plantSel.value }); CACC.rerender(); } });
+    plantSel.appendChild(optionEl('ALL', 'All Plants', f.plantId));
+    d.plants.forEach(function (p) { plantSel.appendChild(optionEl(p.id, p.name, f.plantId)); });
+    var periodSel = el('select', { class: 'gsel', 'aria-label': 'Period',
+      onchange: function () { CACC.store.setFilter({ period: periodSel.value }); CACC.rerender(); } });
+    periodSel.appendChild(optionEl('ALL', 'All Periods', f.period));
+    (d.periods || []).forEach(function (p) { periodSel.appendChild(optionEl(p, p, f.period)); });
+    host.appendChild(plantSel); host.appendChild(periodSel);
+  }
+  function optionEl(val, label, current) { var o = el('option', { value: val, text: label }); if (val === current) o.selected = true; return o; }
+
   function boot() {
     var d = CACC.store.data();
-    document.getElementById('brandSub').textContent = d.company.name;
+    document.getElementById('brandSub').textContent = d.group || d.company.name;
     applyTheme(CACC.store.getTheme());
     buildSidebar();
+    buildGlobalFilter();
     document.addEventListener('keydown', globalKeys);
     var start = (location.hash || '').replace('#', '');
-    navigate(CACC.views[start] ? start : 'dashboard');
+    navigate(CACC.views[start] ? start : 'executiveOverview');
   }
   CACC.openPalette = openPalette;
   CACC.rerender = function () { navigate(current); };

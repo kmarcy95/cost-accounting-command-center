@@ -17,11 +17,14 @@
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   var data = LS.get(KEYS.scenario, null) || clone(CACC.SEED);
+  var filter = LS.get('cacc.filter', null) || clone(CACC.SEED.defaultFilter || { plantId: 'ALL', period: 'ALL' });
 
   var store = {
     data: function () { return data; },
     save: function () { LS.set(KEYS.scenario, data); },
-    reset: function () { data = clone(CACC.SEED); LS.remove(KEYS.scenario); },
+    reset: function () { data = clone(CACC.SEED); filter = clone(CACC.SEED.defaultFilter || { plantId: 'ALL', period: 'ALL' }); LS.remove(KEYS.scenario); LS.remove('cacc.filter'); },
+    getFilter: function () { return filter; },
+    setFilter: function (patch) { Object.keys(patch).forEach(function (k) { filter[k] = patch[k]; }); LS.set('cacc.filter', filter); },
     exportJSON: function () { return JSON.stringify(data, null, 2); },
     importJSON: function (str) {
       var parsed = JSON.parse(str); // throws on bad input — caller handles
